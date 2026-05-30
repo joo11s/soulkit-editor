@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>HAPPYBIZ Image Editor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=Noto+Serif+KR:wght@400;700&family=Gaegu:wght@400;700&family=Cute+Font&family=Jua&family=Do+Hyeon&family=Nanum+Pen+Script&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:#0f0f0f;color:#e8e8e8;height:100vh;overflow:hidden;display:flex;flex-direction:column}
+.login-screen{position:fixed;inset:0;background:#0f0f0f;display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:20px}
+.login-box{background:#161616;border:1px solid #2a2a2a;border-radius:12px;padding:40px;width:320px;text-align:center}
+.login-logo{font-family:'Space Mono',monospace;font-size:18px;color:#ff6b35;font-weight:700;letter-spacing:3px;margin-bottom:6px}
+.login-sub{font-size:11px;color:#444;margin-bottom:28px}
+.login-input{width:100%;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:6px;color:#e8e8e8;padding:10px 14px;font-size:14px;outline:none;text-align:center;letter-spacing:4px;font-family:'Space Mono',monospace;margin-bottom:12px}
+.login-input:focus{border-color:#ff6b35}
+.login-btn{width:100%;background:#ff6b35;color:#000;font-weight:700;border:none;border-radius:6px;padding:10px;font-size:13px;cursor:pointer;font-family:'Noto Sans KR',sans-serif}
+.login-btn:hover{background:#ff8555}
+.login-err{color:#f87171;font-size:11px;margin-top:8px;display:none}
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:48px;background:#161616;border-bottom:1px solid #2a2a2a;flex-shrink:0}
+.logo{font-family:'Space Mono',monospace;font-size:12px;color:#ff6b35;font-weight:700;letter-spacing:2px}
+.badge{background:#ff6b35;color:#000;font-size:8px;font-weight:700;padding:2px 5px;border-radius:2px}
+.actions{display:flex;gap:6px;align-items:center}
+.btn{padding:5px 12px;border-radius:4px;font-size:11px;font-family:'Noto Sans KR',sans-serif;font-weight:500;cursor:pointer;border:none;transition:all .15s;display:flex;align-items:center;gap:4px}
+.btn:disabled{opacity:.35;cursor:not-allowed}
+.ghost{background:transparent;color:#888;border:1px solid #333}
+.ghost:hover:not(:disabled){background:#1e1e1e;color:#ccc}
+.primary{background:#ff6b35;color:#000;font-weight:700}
+.primary:hover:not(:disabled){background:#ff8555}
+.ai{background:#1a1a2e;color:#a78bfa;border:1px solid #3d2d6e}
+.undo-btn{background:#1a1a1a;color:#666;border:1px solid #2a2a2a;font-size:13px;padding:4px 8px}
+.undo-btn:hover{color:#ccc;background:#222}
+.main{display:flex;flex:1;overflow:hidden}
+.left{width:190px;background:#141414;border-right:1px solid #1a1a1a;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.sec{padding:10px 12px;border-bottom:1px solid #1a1a1a}
+/* [FIX 1] 섹션 타이틀 및 라벨 가시성 개선 */
+.stitle{font-size:9px;font-weight:700;color:#888;letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+.upzone{border:1px dashed #2a2a2a;border-radius:6px;padding:14px 8px;text-align:center;cursor:pointer;transition:all .2s;background:#0a0a0a;display:block}
+.upzone:hover{border-color:#ff6b35;background:#1a1209}
+.upzone input{display:none}
+.uptext{font-size:10px;color:#555;line-height:1.7}
+.uptext strong{color:#777;display:block;font-size:11px}
+.tool-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px}
+.tool-btn{background:#0a0a0a;border:1px solid #1e1e1e;border-radius:4px;color:#777;font-size:10px;padding:6px 4px;cursor:pointer;text-align:center;transition:all .15s;display:flex;flex-direction:column;align-items:center;gap:2px}
+.tool-btn:hover{background:#1e1e1e;color:#ccc;border-color:#333}
+.tool-btn .ico{font-size:16px}
+.symbol-grid{display:flex;flex-wrap:wrap;gap:3px}
+.sym{background:#0a0a0a;border:1px solid #1e1e1e;border-radius:3px;color:#aaa;font-size:14px;padding:4px 6px;cursor:pointer;transition:all .1s}
+.sym:hover{background:#1e1e1e;border-color:#444}
+.li{display:flex;align-items:center;gap:5px;padding:5px 7px;border-radius:4px;cursor:pointer;font-size:10px;border:1px solid transparent;margin-bottom:2px}
+.li:hover{background:#1e1e1e}
+.li.on{background:#1a1209;border-color:#ff6b3540}
+.ld{width:6px;height:6px;border-radius:50%;background:#ff6b35;flex-shrink:0}
+.ld.done{background:#4ade80}
+.ld.shape{background:#60a5fa}
+.lt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#666}
+.lx{color:#2a2a2a;font-size:12px;cursor:pointer}
+.lx:hover{color:#f87171}
+.empty{color:#2a2a2a;font-size:10px;text-align:center;padding:8px 0;line-height:1.6}
+.step-row{display:flex;align-items:flex-start;gap:5px;font-size:10px;padding:2px 0}
+.sn{color:#ff6b35;font-weight:700;min-width:12px}
+.st{color:#555;line-height:1.5}
+.st.done{color:#4ade80}
+.st.err{color:#f87171}
+.st.run{color:#a78bfa}
+.mid{flex:1;display:flex;align-items:flex-start;justify-content:center;background:#090909;overflow:auto;position:relative;padding:20px 0}
+#wrap{position:relative;display:none;transform-origin:top center;transition:transform .15s}
+.ph{display:flex;flex-direction:column;align-items:center;gap:8px}
+.ph-i{font-size:36px}
+.ph-t{font-size:11px;color:#2a2a2a;text-align:center;line-height:1.9}
+.right{width:220px;background:#141414;border-left:1px solid #1a1a1a;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+/* [FIX 1] 속성 라벨 가시성 개선 */
+.pl{font-size:9px;color:#aaa;margin-bottom:3px;display:block;letter-spacing:1px;text-transform:uppercase}
+.pr{margin-bottom:8px}
+.pi{width:100%;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:4px;color:#e8e8e8;font-size:11px;padding:4px 7px;outline:none;font-family:'Noto Sans KR',sans-serif}
+.pi:focus{border-color:#ff6b35}
+.cr{display:flex;align-items:center;gap:5px}
+.cs{width:24px;height:24px;border-radius:3px;border:1px solid #2a2a2a;cursor:pointer;flex-shrink:0}
+input[type=color]{opacity:0;width:0;height:0;position:absolute}
+.sr{display:flex;align-items:center;gap:5px}
+.sr input[type=range]{flex:1;accent-color:#ff6b35}
+.sv{font-size:10px;color:#aaa;min-width:26px;text-align:right}
+.ar{display:flex;gap:3px}
+.ab{flex:1;padding:3px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:3px;color:#666;font-size:11px;cursor:pointer;text-align:center}
+.ab:hover,.ab.on{background:#1a1209;border-color:#ff6b3560;color:#ff6b35}
+.div{height:1px;background:#1a1a1a;margin:5px 0}
+.sbar{height:24px;background:#060606;border-top:1px solid #141414;display:flex;align-items:center;padding:0 14px;gap:14px;font-size:9px;color:#444;flex-shrink:0}
+.sdot{width:4px;height:4px;border-radius:50%;background:#1a1a1a}
+.sdot.spin{background:#a78bfa;animation:pulse .9s infinite}
+.sdot.ok{background:#4ade80}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:9000}
+.ov.show{display:flex}
+.om{font-size:12px;color:#a78bfa;font-family:'Space Mono',monospace;letter-spacing:1px}
+.os{font-size:10px;color:#444;max-width:220px;text-align:center;line-height:1.8}
+.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%) translateY(12px);background:#141414;border:1px solid #2a2a2a;padding:7px 14px;border-radius:6px;font-size:11px;color:#999;opacity:0;transition:all .25s;z-index:9999;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:#4ade8040;color:#4ade80}
+.toast.err{border-color:#f8717140;color:#f87171}
+select.pi{cursor:pointer}
+.ns{color:#555;font-size:10px;text-align:center;padding:8px 0;line-height:1.6}
+/* [FIX 2] px 입력 필드 */
+.px-input{width:44px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:3px;color:#e8e8e8;font-size:10px;padding:2px 4px;text-align:center;outline:none;}
+.px-input:focus{border-color:#ff6b35}
+/* ===== 메인이미지 탭 ===== */
+.tab-bar{display:flex;gap:0;background:#111;border-bottom:1px solid #1a1a1a;flex-shrink:0;padding:0 16px}
+.tab-btn{padding:0 18px;height:34px;font-size:11px;font-family:'Noto Sans KR',sans-serif;font-weight:500;color:#555;background:transparent;border:none;border-bottom:2px solid transparent;cursor:pointer;transition:all .15s}
+.tab-btn:hover{color:#aaa}
+.tab-btn.active{color:#ff6b35;border-bottom-color:#ff6b35}
+.mi-main{display:none;flex:1;overflow:hidden}
+.mi-main.show{display:flex}
+.mi-tools{width:150px;background:#141414;border-right:1px solid #1a1a1a;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.mi-slots{width:160px;background:#111;border-right:1px solid #1a1a1a;display:flex;flex-direction:column;flex-shrink:0;padding:10px 8px;overflow-y:auto;gap:6px}
+.mi-slot{height:130px;border:1px dashed #2a2a2a;border-radius:6px;background:#0a0a0a;cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:all .2s;position:relative;overflow:hidden;flex-shrink:0}
+.mi-slot:hover{border-color:#ff6b35;background:#1a1209}
+.mi-slot.filled{border-style:solid;border-color:#ff6b3560}
+.mi-slot img{width:100%;height:100%;object-fit:contain}
+.mi-slot-label{font-size:9px;color:#555;letter-spacing:1px;text-transform:uppercase;text-align:center;line-height:1.4}
+.mi-slot-ico{font-size:18px;color:#2a2a2a;margin-bottom:3px}
+.mi-slot input{display:none}
+.mi-slot-clear{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.7);border:1px solid #333;border-radius:3px;color:#777;font-size:10px;width:16px;height:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;line-height:1}
+.mi-slot-clear:hover{color:#f87171}
+.mi-canvas-wrap{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#090909;position:relative;overflow:visible;padding:16px 0}
+.mi-placeholder{display:flex;flex-direction:column;align-items:center;gap:10px}
+.mi-placeholder-ico{font-size:72px}
+.mi-placeholder-txt{font-size:11px;text-align:center;line-height:2;color:#2a2a2a}
+.mi-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);align-items:center;justify-content:center;flex-direction:column;gap:10px;z-index:9000}
+.mi-overlay.show{display:flex}
+.mi-ov-msg{font-size:12px;color:#ff6b35;font-family:'Space Mono',monospace;letter-spacing:1px}
+.mi-ov-sub{font-size:10px;color:#444;text-align:center;max-width:240px;line-height:1.8}
+.pix-office{background:#1a1a2e;border:1px solid #2a2a4a;border-radius:8px;padding:12px 16px;display:flex;gap:12px;align-items:flex-end}
+.pix-char-wrap{display:flex;flex-direction:column;align-items:center;gap:4px}
+.pix-label{font-size:8px;color:#555;font-family:'Space Mono',monospace;letter-spacing:1px}
+.pix-log{background:#0d0d1a;border:1px solid #1a1a2e;border-radius:4px;padding:6px 10px;min-width:160px;max-width:200px;height:52px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
+.pix-log-line{font-size:9px;font-family:'Space Mono',monospace;animation:logFadeIn .3s ease}
+.pix-log-line.work{color:#7fdbca}
+.pix-log-line.ok{color:#4ecb71}
+@keyframes logFadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
+.pix-cursor{display:inline-block;animation:blink .7s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:0}}
+.mi-props{width:200px;background:#141414;border-left:1px solid #1a1a1a;border-right:1px solid #1a1a1a;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.mi-prompt-panel{width:200px;background:#141414;border-left:1px solid #1a1a1a;display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto;padding:10px}
+.preset-grid{display:flex;flex-wrap:wrap;gap:4px;margin-bottom:8px}
+.preset-btn{background:#0a0a0a;border:1px solid #1e1e1e;border-radius:4px;color:#777;font-size:10px;padding:4px 7px;cursor:pointer;transition:all .15s;white-space:nowrap}
+.preset-btn:hover{color:#ff6b35;border-color:#ff6b3560}
+.preset-btn.on{background:#1a1209;border-color:#ff6b35;color:#ff6b35}
+.mi-textarea{width:100%;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:4px;color:#e8e8e8;font-size:10px;padding:6px 8px;outline:none;resize:none;height:90px;font-family:'Noto Sans KR',sans-serif;line-height:1.6}
+.mi-textarea:focus{border-color:#ff6b35}
+.mi-gen-btn{width:100%;background:#ff6b35;color:#000;font-weight:700;border:none;border-radius:6px;padding:9px;font-size:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;margin-top:8px}
+.mi-gen-btn:hover:not(:disabled){background:#ff8555}
+.mi-gen-btn:disabled{opacity:.4;cursor:not-allowed}
+.mi-dl-group{display:none;align-items:center;gap:4px}
+.mi-dl-group.show{display:flex}
+.sz-btn,.fmt-btn{background:#1a1a1a;color:#666;border:1px solid #2a2a2a;font-size:10px;padding:3px 8px;border-radius:3px;cursor:pointer;font-family:'Noto Sans KR',sans-serif}
+.sz-btn.on,.fmt-btn.on{background:#1a1209;border-color:#ff6b3560;color:#ff6b35}
+.mi-dl-btn{background:#ff6b35;color:#000;font-weight:700;border:none;border-radius:4px;font-size:11px;padding:5px 10px;cursor:pointer;font-family:'Noto Sans KR',sans-serif}
+.mi-dl-btn:hover{background:#ff8555}
+@keyframes pixelJump{0%,100%{transform:translateY(0)}40%{transform:translateY(-14px)}60%{transform:translateY(-14px)}}
+.pixel-anim{animation:pixelJump .8s ease-in-out infinite}
+
+</style>
+</head>
+<body>
+
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-logo">HAPPYBIZ</div>
+    <div class="login-sub">IMAGE EDITOR</div>
+    <input type="password" class="login-input" id="login-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+    <button class="login-btn" onclick="doLogin()">입장</button>
+    <div class="login-err" id="login-err">비밀번호가 틀렸습니다</div>
+  </div>
+</div>
+
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:10px">
+    <span class="logo">HAPPYBIZ</span>
+    <span class="badge">EDITOR v5</span>
+  </div>
+  <div class="actions">
+    <div class="mi-dl-group" id="mi-dl-group">
+      <button class="btn ghost" id="mi-clear-btn" onclick="miClearAll()" style="font-size:10px;margin-right:4px">초기화</button>
+      <button class="btn undo-btn" id="mi-undo-btn" onclick="miUndo()" title="되돌리기 Ctrl+Z">↩</button>
+      <button class="btn undo-btn" id="mi-redo-btn" onclick="miRedo()" title="다시실행 Ctrl+Y">↪</button>
+      <span style="font-size:10px;color:#555;margin-right:2px">크기</span>
+      <button class="sz-btn" id="sz500" onclick="miSetSize(500)">500</button>
+      <button class="sz-btn on" id="sz1000" onclick="miSetSize(1000)">1000</button>
+      <button class="sz-btn" id="sz1200" onclick="miSetSize(1200)">1200</button>
+      <button class="sz-btn" id="szOrig" onclick="miSetSize(0)">원본</button>
+      <span style="font-size:10px;color:#444;margin:0 2px">|</span>
+      <button class="fmt-btn" id="fmtjpg" onclick="miSetFmt('jpg')">JPG</button>
+      <button class="fmt-btn on" id="fmtpng" onclick="miSetFmt('png')">PNG</button>
+      <button class="mi-dl-btn" onclick="miDownload()">↓ 저장</button>
+    </div>
+    <button class="btn undo-btn" onclick="doUndo()" title="실행취소 Ctrl+Z">↩</button>
+    <button class="btn undo-btn" onclick="doRedo()" title="다시실행 Ctrl+Y">↪</button>
+    <button class="btn undo-btn" onclick="setZoom(zoom-0.1)" title="축소">−</button>
+    <span id="zoom-label" style="font-size:10px;color:#888;min-width:36px;text-align:center">100%</span>
+    <button class="btn undo-btn" onclick="setZoom(zoom+0.1)" title="확대">+</button>
+    <button class="btn ghost" onclick="fitZoom()" style="font-size:9px">맞춤</button>
+    <button class="btn ghost" onclick="clearAll()" style="font-size:10px">초기화</button>
+    <button class="btn ghost" onclick="saveJPG()" style="font-size:10px">JPG</button>
+    <button class="btn primary" onclick="savePNG()">↓ PNG</button>
+  </div>
+</div>
+
+<div class="tab-bar">
+  <button class="tab-btn active" id="tab-editor" onclick="switchTab('editor')">📋 상세페이지 에디터</button>
+  <button class="tab-btn" id="tab-main" onclick="switchTab('main')">🖼️ 메인이미지 생성</button>
+</div>
+
+<div class="main" id="tab-editor-content">
+  <div class="left">
+    <div class="sec">
+      <div class="stitle">이미지 업로드</div>
+      <label class="upzone" id="upzone">
+        <input type="file" accept="image/*" onchange="loadImg(this)">
+        <div class="uptext"><strong>클릭 또는 드래그</strong>업로드 즉시 자동 번역</div>
+      </label>
+    </div>
+    <div class="sec">
+      <div class="stitle">도구</div>
+      <div class="tool-grid">
+        <div class="tool-btn" onclick="addText()"><span class="ico">T</span>텍스트</div>
+        <div class="tool-btn" onclick="addRect()"><span class="ico">▭</span>사각형</div>
+        <div class="tool-btn" onclick="addCircle()"><span class="ico">○</span>원형</div>
+        <div class="tool-btn" onclick="addRoundRect()"><span class="ico">▢</span>둥근사각</div>
+        <div class="tool-btn" onclick="addArrow()"><span class="ico">→</span>화살표</div>
+        <div class="tool-btn" onclick="addDimension()"><span class="ico">↔</span>치수선</div>
+        <!-- [FIX 5] 안내선 도구 추가 -->
+        <div class="tool-btn" onclick="addLine('solid')"><span class="ico">─</span>실선</div>
+        <div class="tool-btn" onclick="addLine('dashed')"><span class="ico">╌</span>점선</div>
+        <div class="tool-btn" onclick="addLine('dotted')"><span class="ico">···</span>점점선</div>
+        <div class="tool-btn" onclick="addLine('long-dash')"><span class="ico">━</span>긴점선</div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="stitle">심볼 삽입</div>
+      <div class="symbol-grid" id="sym-grid"></div>
+    </div>
+    <div class="sec">
+      <div class="stitle">진행 상태</div>
+      <div class="step-row"><span class="sn">①</span><span class="st" id="s1">이미지 업로드 대기</span></div>
+      <div class="step-row"><span class="sn">②</span><span class="st" id="s2">텍스트 위치 감지</span></div>
+      <div class="step-row"><span class="sn">③</span><span class="st" id="s3">텍스트 제거</span></div>
+      <div class="step-row"><span class="sn">④</span><span class="st" id="s4">한국어 번역 삽입</span></div>
+    </div>
+    <div class="sec" style="flex:1">
+      <div class="stitle">레이어</div>
+      <div id="layers"><div class="empty">레이어 없음</div></div>
+    </div>
+  </div>
+
+  <div class="mid" id="mid">
+    <div class="ph" id="ph">
+      <div class="ph-i">🖼️</div>
+      <div class="ph-t">이미지 업로드 →<br>텍스트 자동 제거 + 번역</div>
+    </div>
+    <div id="wrap">
+      <canvas id="c"></canvas>
+      <div class="ov" id="ov">
+        <div class="pix-office">
+          <div class="pix-char-wrap">
+            <canvas id="pixel-canvas-ed" width="64" height="64" style="image-rendering:pixelated;width:48px;height:48px"></canvas>
+            <div class="pix-label">AI AGENT</div>
+          </div>
+          <div class="pix-log" id="pix-log-ed">
+            <div class="pix-log-line work">&gt; 초기화 중...<span class="pix-cursor">▊</span></div>
+          </div>
+        </div>
+        <div class="om" id="om">처리 중...</div>
+        <div class="os" id="os"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right">
+    <div class="sec">
+      <div class="stitle">속성</div>
+      <div id="ns" class="ns">요소를 선택하세요</div>
+      <div id="props" style="display:none">
+        <div id="text-props">
+          <div class="pr">
+            <label class="pl">텍스트</label>
+            <textarea class="pi" id="ptxt" rows="3" oninput="sp('txt')" style="resize:none;height:56px"></textarea>
+          </div>
+          <div class="pr">
+            <label class="pl">폰트</label>
+            <select class="pi" id="pfont" onchange="sp('font')">
+              <option value="Noto Sans KR">Noto Sans KR (기본)</option>
+              <option value="Noto Serif KR">Noto Serif KR (명조)</option>
+              <option value="Jua">Jua (주아체)</option>
+              <option value="Do Hyeon">Do Hyeon (도현체)</option>
+              <option value="Gaegu">Gaegu (개구체)</option>
+              <option value="Nanum Pen Script">나눔펜 (손글씨)</option>
+              <option value="Cute Font">Cute Font (귀여운)</option>
+            </select>
+          </div>
+          <div class="pr">
+            <label class="pl">크기</label>
+            <!-- [FIX 2] 슬라이더 + px 직접 입력 -->
+            <div class="sr">
+              <input type="range" min="8" max="200" value="16" id="psz" oninput="sp('sz')">
+              <input type="number" class="px-input" id="pszn" min="8" max="200" value="16" onchange="sp('szn')">
+            </div>
+          </div>
+          <div class="pr">
+            <label class="pl">굵기</label>
+            <select class="pi" id="pbold" onchange="sp('bold')">
+              <option value="normal">일반</option>
+              <option value="bold">굵게</option>
+            </select>
+          </div>
+          <div class="pr">
+            <label class="pl">텍스트 색상</label>
+            <div class="cr">
+              <div class="cs" id="swtxt" onclick="document.getElementById('pktxt').click()"></div>
+              <input type="color" id="pktxt" oninput="sp('color')">
+              <input class="pi" id="pchex" style="flex:1;font-size:10px" readonly>
+            </div>
+          </div>
+          <div class="pr">
+            <label class="pl">정렬</label>
+            <div class="ar">
+              <button class="ab" id="al-left" onclick="setAl('left')">←</button>
+              <button class="ab" id="al-center" onclick="setAl('center')">↔</button>
+              <button class="ab" id="al-right" onclick="setAl('right')">→</button>
+            </div>
+          </div>
+          <!-- [FIX 6] 텍스트 박스 둥근 모서리 -->
+          <div class="pr">
+            <label class="pl">박스 둥글기 (radius)</label>
+            <div class="sr">
+              <input type="range" min="0" max="60" value="0" id="pradius" oninput="sp('radius')">
+              <input type="number" class="px-input" id="pradiusn" min="0" max="60" value="0" onchange="sp('radiusn')">
+            </div>
+          </div>
+        </div>
+        <div class="pr">
+          <label class="pl">배경/채우기 색상</label>
+          <div class="cr">
+            <div class="cs" id="swbg" onclick="document.getElementById('pkbg').click()"></div>
+            <input type="color" id="pkbg" oninput="sp('bg')">
+            <button class="btn ghost" style="font-size:9px;padding:2px 6px" onclick="clearBg()">투명</button>
+          </div>
+        </div>
+        <div class="pr">
+          <label class="pl">테두리 색상</label>
+          <div class="cr">
+            <div class="cs" id="swstroke" onclick="document.getElementById('pkstroke').click()"></div>
+            <input type="color" id="pkstroke" oninput="sp('stroke')">
+            <button class="btn ghost" style="font-size:9px;padding:2px 6px" onclick="clearStroke()">없음</button>
+          </div>
+        </div>
+        <div class="pr">
+          <label class="pl">테두리 두께</label>
+          <div class="sr">
+            <input type="range" min="0" max="20" value="0" id="pstrokew" oninput="sp('strokew')">
+            <span class="sv" id="pstrokewv">0</span>
+          </div>
+        </div>
+        <div class="pr">
+          <label class="pl">투명도</label>
+          <div class="sr">
+            <input type="range" min="0" max="100" value="100" id="popacity" oninput="sp('opacity')">
+            <span class="sv" id="popacityv">100%</span>
+          </div>
+        </div>
+        <div class="div"></div>
+        <div class="pr" style="display:flex;gap:4px">
+          <button class="btn ghost" style="flex:1;font-size:10px" onclick="bringFwd()">앞으로</button>
+          <button class="btn ghost" style="flex:1;font-size:10px" onclick="sendBwd()">뒤로</button>
+        </div>
+        <div class="pr" style="display:flex;gap:4px">
+          <button class="btn ghost" style="flex:1;font-size:10px" onclick="duplicateObj()">복제</button>
+          <button class="btn ghost" style="flex:1;font-size:10px;color:#f87171;border-color:#2a1010" onclick="delSel()">삭제</button>
+        </div>
+        <div class="pr">
+          <button class="btn ai" style="width:100%;font-size:10px" onclick="transOne()">✦ 다시 번역</button>
+        </div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="stitle">정보</div>
+      <div style="font-size:10px;color:#555;line-height:2">
+        <div>크기: <span id="isize" style="color:#777">-</span></div>
+        <div>레이어: <span id="icnt" style="color:#777">0</span>개</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== 메인이미지 생성 탭 ===== -->
+<div class="mi-main" id="tab-main-content">
+
+  <!-- 열1: 도구 -->
+  <div class="mi-tools">
+    <div class="sec">
+      <div class="stitle">도구</div>
+      <div class="tool-grid">
+        <div class="tool-btn" onclick="miAddText()"><span class="ico">T</span>텍스트</div>
+        <div class="tool-btn" onclick="miAddRect()"><span class="ico">▭</span>사각형</div>
+        <div class="tool-btn" onclick="miAddCircle()"><span class="ico">○</span>원형</div>
+        <div class="tool-btn" onclick="miAddRoundRect()"><span class="ico">▢</span>둥근사각</div>
+        <div class="tool-btn" onclick="miAddArrow()"><span class="ico">→</span>화살표</div>
+        <div class="tool-btn" onclick="miAddDimension()"><span class="ico">↔</span>치수선</div>
+        <div class="tool-btn" onclick="miAddLine('solid')"><span class="ico">─</span>실선</div>
+        <div class="tool-btn" onclick="miAddLine('dashed')"><span class="ico">╌</span>점선</div>
+        <div class="tool-btn" onclick="miAddLine('dotted')"><span class="ico">···</span>점점선</div>
+        <div class="tool-btn" onclick="miAddLine('long-dash')"><span class="ico">━</span>긴점선</div>
+      </div>
+    </div>
+    <div class="sec">
+      <div class="stitle">심볼 삽입</div>
+      <div class="symbol-grid" id="mi-sym-grid"></div>
+    </div>
+    <div class="sec">
+      <div class="stitle">진행 상태</div>
+      <div class="step-row"><span class="sn">①</span><span class="st" id="mi-s1">원본 이미지 대기</span></div>
+      <div class="step-row"><span class="sn">②</span><span class="st" id="mi-s2">R2 업로드</span></div>
+      <div class="step-row"><span class="sn">③</span><span class="st" id="mi-s3">이미지 생성</span></div>
+      <div class="step-row"><span class="sn">④</span><span class="st" id="mi-s4">완료</span></div>
+    </div>
+    <div class="sec" style="flex:1">
+      <div class="stitle">레이어</div>
+      <div id="mi-layers"><div class="empty">레이어 없음</div></div>
+    </div>
+  </div>
+
+  <!-- 열2: 이미지 슬롯 -->
+  <div class="mi-slots">
+    <label class="mi-slot" id="slot-orig" ondragover="event.preventDefault()" ondrop="event.preventDefault();miSlotDrop(event,'orig')">
+      <input type="file" accept="image/*" onchange="miSlotLoad(this,'orig')">
+      <div id="slot-orig-preview" style="display:none;width:100%;height:100%;position:absolute;inset:0">
+        <img id="slot-orig-img" style="width:100%;height:100%;object-fit:contain">
+        <button class="mi-slot-clear" onclick="event.stopPropagation();miSlotClear('orig')">×</button>
+      </div>
+      <span class="mi-slot-ico">📦</span>
+      <span class="mi-slot-label">원본 상품<br><span style="color:#ff6b3560">*필수</span></span>
+    </label>
+    <label class="mi-slot" id="slot-bg" ondragover="event.preventDefault()" ondrop="event.preventDefault();miSlotDrop(event,'bg')">
+      <input type="file" accept="image/*" onchange="miSlotLoad(this,'bg')">
+      <div id="slot-bg-preview" style="display:none;width:100%;height:100%;position:absolute;inset:0">
+        <img id="slot-bg-img" style="width:100%;height:100%;object-fit:contain">
+        <button class="mi-slot-clear" onclick="event.stopPropagation();miSlotClear('bg')">×</button>
+      </div>
+      <span class="mi-slot-ico">🌅</span>
+      <span class="mi-slot-label">배경 참고<br><span style="color:#444">선택</span></span>
+    </label>
+    <label class="mi-slot" id="slot-design" ondragover="event.preventDefault()" ondrop="event.preventDefault();miSlotDrop(event,'design')">
+      <input type="file" accept="image/*" onchange="miSlotLoad(this,'design')">
+      <div id="slot-design-preview" style="display:none;width:100%;height:100%;position:absolute;inset:0">
+        <img id="slot-design-img" style="width:100%;height:100%;object-fit:contain">
+        <button class="mi-slot-clear" onclick="event.stopPropagation();miSlotClear('design')">×</button>
+      </div>
+      <span class="mi-slot-ico">🎨</span>
+      <span class="mi-slot-label">디자인 참고<br><span style="color:#444">선택</span></span>
+    </label>
+  </div>
+
+  <!-- 열3: 생성결과 (정중앙) -->
+  <div class="mi-canvas-wrap" id="mi-canvas-wrap">
+    <div class="mi-placeholder" id="mi-placeholder" style="display:flex">
+      <div class="mi-placeholder-ico">🖼️</div>
+      <div class="mi-placeholder-txt">원본 이미지 업로드 후<br>프롬프트 작성 → 생성 버튼</div>
+    </div>
+    <div id="mi-result-wrap" style="position:relative;display:none;line-height:0">
+      <img id="mi-result-img" style="display:block;max-width:100%;max-height:78vh;border-radius:4px;box-shadow:0 4px 24px rgba(0,0,0,.6)">
+      <canvas id="mi-c" style="position:absolute;top:0;left:0;pointer-events:auto;z-index:10"></canvas>
+    </div>
+    <div class="mi-overlay" id="mi-overlay">
+      <div class="pix-office">
+        <div class="pix-char-wrap">
+          <canvas id="pixel-canvas" width="64" height="64" style="image-rendering:pixelated;width:48px;height:48px"></canvas>
+          <div class="pix-label">AI AGENT</div>
+        </div>
+        <div class="pix-log" id="pix-log">
+          <div class="pix-log-line work">&gt; 초기화 중...<span class="pix-cursor">▊</span></div>
+        </div>
+      </div>
+      <div class="mi-ov-msg" id="mi-ov-msg">이미지 생성 중...</div>
+      <div class="mi-ov-sub" id="mi-ov-sub">fal.ai Flux Kontext 작업 중<br>잠깐만요! (10~30초)</div>
+    </div>
+  </div>
+
+  <!-- 열4: 속성패널 -->
+  <div class="mi-props">
+    <div class="sec">
+      <div class="stitle">속성</div>
+      <div id="mi-ns" class="ns">요소를 선택하세요</div>
+      <div id="mi-props-detail" style="display:none">
+        <div id="mi-text-props">
+          <div class="pr"><label class="pl">텍스트</label><textarea class="pi" id="mi-ptxt" rows="3" oninput="miSp('txt')" style="resize:none;height:56px"></textarea></div>
+          <div class="pr"><label class="pl">폰트</label>
+            <select class="pi" id="mi-pfont" onchange="miSp('font')">
+              <option value="Noto Sans KR">Noto Sans KR (기본)</option>
+              <option value="Noto Serif KR">Noto Serif KR (명조)</option>
+              <option value="Jua">Jua (주아체)</option>
+              <option value="Do Hyeon">Do Hyeon (도현체)</option>
+              <option value="Gaegu">Gaegu (개구체)</option>
+              <option value="Nanum Pen Script">나눔펜 (손글씨)</option>
+              <option value="Cute Font">Cute Font (귀여운)</option>
+            </select>
+          </div>
+          <div class="pr"><label class="pl">크기</label><div class="sr"><input type="range" min="8" max="200" value="24" id="mi-psz" oninput="miSp('sz')"><input type="number" class="px-input" id="mi-pszn" min="8" max="200" value="24" onchange="miSp('szn')"></div></div>
+          <div class="pr"><label class="pl">굵기</label><select class="pi" id="mi-pbold" onchange="miSp('bold')"><option value="normal">일반</option><option value="bold">굵게</option></select></div>
+          <div class="pr"><label class="pl">텍스트 색상</label><div class="cr"><div class="cs" id="mi-swtxt" onclick="document.getElementById('mi-pktxt').click()"></div><input type="color" id="mi-pktxt" oninput="miSp('color')"><input class="pi" id="mi-pchex" style="flex:1;font-size:10px" readonly></div></div>
+          <div class="pr"><label class="pl">정렬</label><div class="ar"><button class="ab" id="mi-al-left" onclick="miSetAl('left')">←</button><button class="ab" id="mi-al-center" onclick="miSetAl('center')">↔</button><button class="ab" id="mi-al-right" onclick="miSetAl('right')">→</button></div></div>
+          <div class="pr"><label class="pl">박스 둥글기</label><div class="sr"><input type="range" min="0" max="60" value="0" id="mi-pradius" oninput="miSp('radius')"><input type="number" class="px-input" id="mi-pradiusn" min="0" max="60" value="0" onchange="miSp('radiusn')"></div></div>
+        </div>
+        <div class="pr"><label class="pl">배경/채우기 색상</label><div class="cr"><div class="cs" id="mi-swbg" onclick="document.getElementById('mi-pkbg').click()"></div><input type="color" id="mi-pkbg" oninput="miSp('bg')"><button class="btn ghost" style="font-size:9px;padding:2px 6px" onclick="miClearBg()">투명</button></div></div>
+        <div class="pr"><label class="pl">테두리 색상</label><div class="cr"><div class="cs" id="mi-swstroke" onclick="document.getElementById('mi-pkstroke').click()"></div><input type="color" id="mi-pkstroke" oninput="miSp('stroke')"><button class="btn ghost" style="font-size:9px;padding:2px 6px" onclick="miClearStroke()">없음</button></div></div>
+        <div class="pr"><label class="pl">테두리 두께</label><div class="sr"><input type="range" min="0" max="20" value="0" id="mi-pstrokew" oninput="miSp('strokew')"><span class="sv" id="mi-pstrokewv">0</span></div></div>
+        <div class="pr"><label class="pl">투명도</label><div class="sr"><input type="range" min="0" max="100" value="100" id="mi-popacity" oninput="miSp('opacity')"><span class="sv" id="mi-popacityv">100%</span></div></div>
+        <div class="pr"><label class="pl">크기 (W × H px)</label><div class="cr" style="gap:4px"><input type="number" class="px-input" id="mi-pw" style="width:52px" placeholder="W" onchange="miSp('w')"><span style="font-size:10px;color:#555">×</span><input type="number" class="px-input" id="mi-ph" style="width:52px" placeholder="H" onchange="miSp('h')"></div></div>
+        <div class="div"></div>
+        <div class="pr" style="display:flex;gap:4px">
+          <button class="btn ghost" style="flex:1;font-size:10px" onclick="miBringFwd()">앞으로</button>
+          <button class="btn ghost" style="flex:1;font-size:10px" onclick="miSendBwd()">뒤로</button>
+        </div>
+        <div class="pr" style="display:flex;gap:4px">
+          <button class="btn ghost" style="flex:1;font-size:10px" onclick="miDuplicate()">복제</button>
+          <button class="btn ghost" style="flex:1;font-size:10px;color:#f87171;border-color:#2a1010" onclick="miDelSel()">삭제</button>
+        </div>
+      </div>
+    </div>
+    <div class="sec"><div class="stitle">정보</div><div style="font-size:10px;color:#555;line-height:2"><div>생성결과: <span id="mi-status" style="color:#777">대기중</span></div></div></div>
+  </div>
+
+  <!-- 열5: 프리셋+프롬프트 -->
+  <div class="mi-prompt-panel">
+    <div class="stitle">배경 프리셋</div>
+    <div class="preset-grid">
+      <button class="preset-btn" onclick="miPreset('Pure white clean studio background, product photography')">흰 배경</button>
+      <button class="preset-btn" onclick="miPreset('Light gray minimal background, soft gradient')">그레이</button>
+      <button class="preset-btn" onclick="miPreset('Dark black background, dramatic lighting')">블랙</button>
+      <button class="preset-btn" onclick="miPreset('Modern kitchen interior background, natural scale')">주방</button>
+      <button class="preset-btn" onclick="miPreset('Elegant living room interior background')">거실</button>
+      <button class="preset-btn" onclick="miPreset('Cozy bedroom background')">침실</button>
+      <button class="preset-btn" onclick="miPreset('Clean bathroom background')">욕실</button>
+      <button class="preset-btn" onclick="miPreset('Aesthetic cafe background with warm lighting')">카페</button>
+      <button class="preset-btn" onclick="miPreset('Fresh green forest nature background')">자연/숲</button>
+      <button class="preset-btn" onclick="miPreset('Clear ocean beach background')">바다</button>
+      <button class="preset-btn" onclick="miPreset('Clear blue sky background')">하늘</button>
+      <button class="preset-btn" onclick="miPreset('Outdoor natural background')">야외</button>
+    </div>
+    <div class="stitle" style="margin-top:4px">프롬프트</div>
+    <textarea class="mi-textarea" id="mi-prompt" placeholder="배경을 어떻게 바꿀지 입력하세요.&#10;예) 주방 배경으로 바꿔줘&#10;예) 흰 배경에 상품만 깔끔하게"></textarea>
+    <button class="mi-gen-btn" id="mi-gen-btn" onclick="miGenerate()">✦ 이미지 생성</button>
+    <div style="margin-top:8px;font-size:9px;color:#333;line-height:1.8;text-align:center">fal.ai Flux Kontext<br>나노바나나2 교체 예정</div>
+  </div>
+
+</div>
+
+<div class="sbar">
+  <div style="display:flex;align-items:center;gap:5px">
+    <div class="sdot" id="sdot"></div>
+    <span id="stxt">대기 중</span>
+  </div>
+  <span style="margin-left:auto">HAPPYBIZ Editor v5.5</span>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+const PASS = 'govl*1111';
+const WORKER = 'https://proxy.wonflowai.com';
+// [FIX 4] 860px 기준 폰트 사이즈 단계 (큰→작은 순)
+const FONT_SIZES = [36, 28, 22, 16, 12];
+// 860px 고정 캔버스 폭
+const CANVAS_W = 860;
+
+function doLogin(){
+  const v=document.getElementById('login-pw').value;
+  if(v===PASS){
+    document.getElementById('login-screen').style.display='none';
+    sessionStorage.setItem('hb_auth','1');
+  } else {
+    document.getElementById('login-err').style.display='block';
+    document.getElementById('login-pw').value='';
+  }
+}
+if(sessionStorage.getItem('hb_auth')==='1') document.getElementById('login-screen').style.display='none';
+
+const SYMBOLS=['♡','♥','★','☆','✦','✧','✨','✱','•','·','→','←','↑','↓','↔','↕','↗','↙','~','!','?','♪','♫','©','™','✓','✗','😊','🌸','🔥','💯'];
+let fontsReady=false;
+document.fonts.ready.then(()=>{fontsReady=true;});
+
+// [FIX 8] 클립보드 복사/붙여넣기
+let clipboard=null;
+
+window.onload=()=>{
+  const sg=document.getElementById('sym-grid');
+  SYMBOLS.forEach(s=>{
+    const d=document.createElement('div');
+    d.className='sym';d.textContent=s;
+    d.onclick=()=>addSymbol(s);
+    sg.appendChild(d);
+  });
+  const miSg=document.getElementById('mi-sym-grid');
+  SYMBOLS.forEach(s=>{
+    const d=document.createElement('div');
+    d.className='sym';d.textContent=s;
+    d.onclick=()=>miAddSymbol(s);
+    miSg.appendChild(d);
+  });
+  initCanvas();
+  document.addEventListener('keydown',e=>{
+    const tag=document.activeElement.tagName;
+    const isInput=(tag==='TEXTAREA'||tag==='INPUT');
+    if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();doUndo();}
+    if((e.ctrlKey||e.metaKey)&&e.key==='y'){e.preventDefault();doRedo();}
+    // [FIX 8] Ctrl+C 복사
+    if((e.ctrlKey||e.metaKey)&&e.key==='c'&&!isInput){
+      const s=cv.getActiveObject();
+      if(s&&s!==cv.getObjects()[0]){
+        s.clone(c=>{clipboard=c;});
+        e.preventDefault();
+      }
+    }
+    // [FIX 8] Ctrl+V 붙여넣기
+    if((e.ctrlKey||e.metaKey)&&e.key==='v'&&!isInput){
+      if(clipboard){
+        clipboard.clone(c=>{
+          c.set({left:(clipboard.left||0)+20,top:(clipboard.top||0)+20});
+          c._meta={...(clipboard._meta||{})};
+          cv.add(c);cv.setActiveObject(c);objs.push(c);
+          updateLayers();updateInfo();saveHistory();
+          clipboard=c;
+        });
+        e.preventDefault();
+      }
+    }
+    if(e.key==='Delete'||e.key==='Backspace'){
+      const s=cv.getActiveObject();
+      if(s&&!isInput){e.preventDefault();delSel();}
+    }
+    // [FIX 7] Shift/Ctrl로 수직·수평 고정은 object:moving에서 처리
+  });
+};
+
+let cv=null,objs=[],sel=null,loaded=false,origDataUrl=null;
+let history=[],histIdx=-1;
+let zoom=1;
+
+function setZoom(z){
+  zoom=Math.max(0.2,Math.min(2,parseFloat(z.toFixed(1))));
+  document.getElementById('wrap').style.transform=`scale(${zoom})`;
+  document.getElementById('zoom-label').textContent=Math.round(zoom*100)+'%';
+}
+function fitZoom(){
+  if(!loaded){setZoom(1);return;}
+  const mid=document.getElementById('mid');
+  const availW=mid.clientWidth-40;
+  const availH=mid.clientHeight-40;
+  const z=Math.min(availW/cv.width,availH/cv.height,1);
+  setZoom(z);
+}
+let _shiftKey=false,_ctrlKey=false;
+document.addEventListener('keydown',e=>{_shiftKey=e.shiftKey;_ctrlKey=e.ctrlKey||e.metaKey;});
+document.addEventListener('keyup',e=>{_shiftKey=e.shiftKey;_ctrlKey=e.ctrlKey||e.metaKey;});
+
+function initCanvas(){
+  cv=new fabric.Canvas('c',{preserveObjectStacking:true});
+  cv.on('selection:created',onSel);
+  cv.on('selection:updated',onSel);
+  cv.on('selection:cleared',onDesel);
+  cv.on('object:modified',()=>{syncP();saveHistory();});
+  // [FIX 7] 이동 시 Shift/Ctrl로 수직·수평 고정
+  cv.on('object:moving',opt=>{
+    if(_shiftKey||_ctrlKey){
+      const o=opt.target;
+      const dx=Math.abs(o.left-(o._lockStartX||o.left));
+      const dy=Math.abs(o.top-(o._lockStartY||o.top));
+      if(!o._lockStartX){o._lockStartX=o.left;o._lockStartY=o.top;}
+      if(dx>dy){o.set('top',o._lockStartY);}
+      else{o.set('left',o._lockStartX);}
+    } else {
+      const o=opt.target;
+      o._lockStartX=o.left;o._lockStartY=o.top;
+    }
+  });
+  cv.on('object:mousedown',opt=>{
+    const o=opt.target;
+    if(o){o._lockStartX=o.left;o._lockStartY=o.top;}
+  });
+  const mid=document.getElementById('mid');
+  mid.addEventListener('dragover',e=>e.preventDefault());
+  mid.addEventListener('drop',e=>{e.preventDefault();const f=e.dataTransfer.files[0];if(f&&f.type.startsWith('image/'))doLoad(f);});
+}
+
+function getRegionContrastColor(item){
+  try{
+    const W=cv.width,H=cv.height;
+    const x=Math.round((item.left/100)*W);
+    const y=Math.round((item.top/100)*H);
+    const w=Math.max(1,Math.round((item.width/100)*W));
+    const h=item.height?Math.max(1,Math.round((item.height/100)*H)):20;
+    const tmp=document.createElement('canvas');
+    tmp.width=w;tmp.height=h;
+    const ctx=tmp.getContext('2d');
+    ctx.drawImage(cv.lowerCanvasEl,x,y,w,h,0,0,w,h);
+    const data=ctx.getImageData(0,0,w,h).data;
+    let sum=0,cnt=0;
+    for(let i=0;i<data.length;i+=4){
+      sum+=(0.299*data[i]+0.587*data[i+1]+0.114*data[i+2]);cnt++;
+    }
+    return (cnt?sum/cnt:128)>140?'#111111':'#ffffff';
+  }catch(e){return'#111111';}
+}
+
+// [FIX 4] 텍스트 크기를 5단계로 분류 (860px 폭 기준, height%로 판단)
+function classifyFontSize(item){
+  const h=item.height||0; // 이미지 높이 대비 %
+  if(h>=10) return FONT_SIZES[0];      // 36px - 큰 제목
+  if(h>=6)  return FONT_SIZES[1];      // 28px - 중간 제목
+  if(h>=4)  return FONT_SIZES[2];      // 22px - 소제목
+  if(h>=2)  return FONT_SIZES[3];      // 16px - 본문
+  return FONT_SIZES[4];                // 12px - 작은 텍스트
+}
+
+function loadImg(inp){if(inp.files[0])doLoad(inp.files[0]);}
+function doLoad(file){
+  const r=new FileReader();
+  r.onload=e=>{
+    origDataUrl=e.target.result;
+    fabric.Image.fromURL(origDataUrl,img=>{
+      // [FIX 3] 폭 860px 고정, 높이 비율 자동
+      const W=CANVAS_W;
+      const H=Math.round(img.height*(W/img.width));
+      const scX=W/img.width;
+      const scY=H/img.height;
+      cv.setWidth(W);cv.setHeight(H);
+      img.set({left:0,top:0,scaleX:scX,scaleY:scY,selectable:false,evented:false});
+      cv.clear();cv.add(img);cv.sendToBack(img);cv.requestRenderAll();
+      objs=[];loaded=true;history=[];histIdx=-1;
+      document.getElementById('wrap').style.display='block';
+      document.getElementById('ph').style.display='none';
+      document.getElementById('isize').textContent=W+'×'+H;
+      document.getElementById('upzone').querySelector('.uptext').innerHTML='<strong style="color:#ff6b35">'+file.name+'</strong>변경하려면 클릭';
+      setStep(1,'done');updateLayers();updateInfo();
+      // 로드 후 자동 맞춤
+      setTimeout(fitZoom, 50);
+      const apiMax=1200;
+      const apiSc=Math.min(apiMax/img.width,apiMax/img.height,1);
+      const tmp=document.createElement('canvas');
+      tmp.width=Math.round(img.width*apiSc);tmp.height=Math.round(img.height*apiSc);
+      const tmpCtx=tmp.getContext('2d');
+      const tmpImg2=new Image();
+      const savedUrl=origDataUrl;
+      tmpImg2.onload=function(){
+        tmpCtx.drawImage(tmpImg2,0,0,tmp.width,tmp.height);
+        origDataUrl=tmp.toDataURL('image/jpeg',0.85);
+        autoProcess(img.width,img.height);
+      };
+      tmpImg2.onerror=function(){origDataUrl=savedUrl;autoProcess(img.width,img.height);};
+      tmpImg2.src=savedUrl;
+    });
+  };
+  r.readAsDataURL(file);
+}
+
+async function callOpenAI(base64,mime){
+  const prompt=`이 이미지의 모든 텍스트를 감지하고 한국어로 번역해서 JSON 배열만 반환해. 마크다운 없이 순수 JSON만 출력해.
+
+각 항목 필드 (모두 필수):
+- text: 원본 텍스트
+- translated: 자연스러운 한국어 번역
+- top: 텍스트 상단 위치 (이미지 높이 대비 %, 숫자)
+- left: 텍스트 좌측 위치 (이미지 너비 대비 %, 숫자)
+- width: 텍스트 영역 너비 (이미지 너비 대비 %, 숫자)
+- height: 텍스트 영역 높이 (이미지 높이 대비 %, 숫자)
+- text_color: 텍스트 실제 색상 hex값 (예: "#ffffff")
+- font_weight: "bold" 또는 "normal"
+
+텍스트가 없으면 빈 배열 [] 반환.`;
+
+  const res=await fetch('https://n8n.wonflowai.com/webhook/happybiz-openai',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({body:{
+      model:'gpt-4o-mini',
+      max_tokens:4096,
+      messages:[{
+        role:'user',
+        content:[
+          {type:'image_url',image_url:{url:`data:${mime};base64,${base64}`,detail:'high'}},
+          {type:'text',text:prompt}
+        ]
+      }]
+    }})
+  });
+  const d=await res.json();
+  if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
+  const raw=d.choices?.[0]?.message?.content||'';
+  const match=raw.replace(/```json|```/g,'').trim().match(/\[[\s\S]*\]/);
+  if(!match)throw new Error('JSON 배열 없음: '+raw.slice(0,100));
+  return JSON.parse(match[0]);
+}
+
+async function callOpenAITr(text){
+  const res=await fetch('https://n8n.wonflowai.com/webhook/happybiz-openai',{
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({body:{
+      model:'gpt-4o-mini',
+      max_tokens:300,
+      messages:[{role:'user',content:`다음을 자연스러운 한국어로 번역해. 번역 결과만 출력해.\n\n${text}`}]
+    }})
+  });
+  const d=await res.json();
+  if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
+  return d.choices?.[0]?.message?.content?.trim()||text;
+}
+
+async function autoProcess(origW,origH){
+  setStep(2,'run','감지 중...');showOv('텍스트 감지 + 번역 중...');setStatus('분석 중','spin');
+  let items;
+  const base64=origDataUrl.split(',')[1];
+  const mime=origDataUrl.split(';')[0].split(':')[1];
+  try{
+    for(let i=0;i<3;i++){
+      try{items=await callOpenAI(base64,mime);break;}
+      catch(e){
+        if(i===2)throw e;
+        showOv(`재시도 중... (${i+2}/3)`);
+        await new Promise(r=>setTimeout(r,1500));
+      }
+    }
+    setStep(2,'done');
+  }catch(e){
+    setStep(2,'err','감지 실패: '+e.message);
+    hideOv();setStatus('오류');toast('감지 실패: '+e.message,'err');return;
+  }
+  if(!items||!items.length){
+    setStep(4,'done');hideOv();toast('감지된 텍스트 없음','ok');setStatus('완료','ok');return;
+  }
+  setStep(4,'run','번역 삽입 중...');
+  objs.forEach(o=>cv.remove(o));objs=[];
+  if(!fontsReady){await document.fonts.ready;fontsReady=true;}
+  items.forEach(item=>{
+    const txt=makeTextLayer(item,item.translated||item.text,true);
+    cv.bringToFront(txt);
+  });
+  updateLayers();updateInfo();setStep(4,'done');cv.requestRenderAll();
+
+  setStep(3,'run','텍스트 제거 중...');
+  showOv('텍스트 제거 중...','fal.ai가 배경을 복원하고 있어요 (10~30초)');
+  try{
+    const imgUrl=await uploadR2(origDataUrl,'image.jpg','image/jpeg');
+    const falRes=await fetch(`${WORKER}/fal-run`,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({model:'fal-ai/image-editing/text-removal',image_url:imgUrl})
+    });
+    const falData=await falRes.json();
+    if(falData.detail||falData.error)throw new Error(JSON.stringify(falData.detail||falData.error));
+    const cleanedUrl=falData.image?.url||falData.images?.[0]?.url;
+    if(!cleanedUrl)throw new Error('결과 URL 없음');
+    setStep(3,'done');
+    fabric.Image.fromURL(cleanedUrl,cleanImg=>{
+      // [FIX 3] 배경 교체도 860px 폭 기준
+      const scX=CANVAS_W/cleanImg.width;
+      const scY=(CANVAS_W*(cleanImg.height/cleanImg.width))/cleanImg.height;
+      cleanImg.set({left:0,top:0,scaleX:scX,scaleY:scY,selectable:false,evented:false});
+      const bg=cv.getObjects().find(o=>!o.selectable);
+      if(bg)cv.remove(bg);
+      cv.add(cleanImg);cv.sendToBack(cleanImg);
+      objs.forEach(o=>cv.bringToFront(o));
+      cv.requestRenderAll();
+    },{crossOrigin:'anonymous'});
+  }catch(e){
+    setStep(3,'err','제거 실패: '+e.message);
+    toast('텍스트 제거 실패 (번역은 완료됨)','err');
+  }
+  hideOv();toast('완료!','ok');setStatus('완료','ok');saveHistory();
+}
+
+async function uploadR2(dataUrl,filename,mimeType){
+  const blob=dataURLtoBlob(dataUrl,mimeType);
+  const fd=new FormData();
+  fd.append('key','happybiz/'+Date.now()+'_'+filename);
+  fd.append('file',new File([blob],filename,{type:mimeType}));
+  const res=await fetch('https://r2-uploader.joo11s11.workers.dev/upload',{method:'POST',body:fd});
+  const d=await res.json();
+  if(!d.url)throw new Error('R2 업로드 실패: '+JSON.stringify(d));
+  return d.url;
+}
+function dataURLtoBlob(dataUrl,mimeType){
+  const arr=dataUrl.split(','),bstr=atob(arr[1]);
+  let n=bstr.length;const u8=new Uint8Array(n);
+  while(n--)u8[n]=bstr.charCodeAt(n);
+  return new Blob([u8],{type:mimeType});
+}
+
+async function transOne(){
+  if(!sel)return;
+  showOv('번역 중...');
+  try{
+    const t=await callOpenAITr(sel._meta?.original||sel.text||'');
+    sel.set('text',t);
+    document.getElementById('ptxt').value=t;
+    cv.requestRenderAll();updateLayers();toast('번역 완료','ok');
+  }catch(e){toast('오류: '+e.message,'err');}
+  finally{hideOv();}
+}
+
+// [FIX 4] makeTextLayer - 5단계 폰트 사이즈 적용, [FIX 6] radius 지원
+function makeTextLayer(item,displayText,translated){
+  const W=cv.width,H=cv.height;
+  const left=(item.left/100)*W;
+  const top=(item.top/100)*H;
+  const width=(item.width/100)*W;
+  // [FIX 4] height% 기반 단계별 폰트 사이즈
+  const fs=classifyFontSize(item);
+  let tc='#111111';
+  if(item.text_color&&/^#[0-9a-fA-F]{3,6}$/.test(item.text_color)){
+    tc=item.text_color;
+  }else{
+    tc=getRegionContrastColor(item);
+  }
+  const txt=new fabric.Textbox(displayText,{
+    left,top,width,fontSize:fs,
+    fontWeight:item.font_weight||'bold',
+    fill:tc,
+    fontFamily:'Noto Sans KR',
+    textAlign:'left',
+    borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,
+    transparentCorners:false,padding:3,
+  });
+  txt._meta={original:item.text,translated,type:'text'};
+  cv.add(txt);objs.push(txt);return txt;
+}
+
+// ── 도구 ──
+function addText(){
+  if(!loaded)return;
+  const txt=new fabric.Textbox('텍스트 입력',{left:50,top:50,width:200,fontSize:24,fill:'#ffffff',fontFamily:'Noto Sans KR',borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false,padding:3});
+  txt._meta={type:'text'};cv.add(txt);cv.setActiveObject(txt);objs.push(txt);updateLayers();updateInfo();saveHistory();
+}
+function addSymbol(s){
+  if(!loaded)return;
+  const txt=new fabric.Text(s,{left:100,top:100,fontSize:40,fill:'#ff6b35',fontFamily:'Noto Sans KR',textAlign:'center',borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false,lockUniScaling:true});
+  txt._meta={type:'symbol'};cv.add(txt);cv.setActiveObject(txt);objs.push(txt);updateLayers();updateInfo();saveHistory();
+}
+function addRect(){
+  if(!loaded)return;
+  const r=new fabric.Rect({left:50,top:50,width:150,height:80,fill:'rgba(255,107,53,0.3)',stroke:'#ff6b35',strokeWidth:2,borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false});
+  r._meta={type:'shape'};cv.add(r);cv.setActiveObject(r);objs.push(r);updateLayers();updateInfo();saveHistory();
+}
+function addRoundRect(){
+  if(!loaded)return;
+  const r=new fabric.Rect({left:50,top:50,width:150,height:60,fill:'rgba(255,107,53,0.3)',stroke:'#ff6b35',strokeWidth:2,rx:12,ry:12,borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false});
+  r._meta={type:'shape'};cv.add(r);cv.setActiveObject(r);objs.push(r);updateLayers();updateInfo();saveHistory();
+}
+function addCircle(){
+  if(!loaded)return;
+  const c=new fabric.Circle({left:50,top:50,radius:50,fill:'rgba(255,107,53,0.3)',stroke:'#ff6b35',strokeWidth:2,borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false});
+  c._meta={type:'shape'};cv.add(c);cv.setActiveObject(c);objs.push(c);updateLayers();updateInfo();saveHistory();
+}
+function addArrow(){
+  if(!loaded)return;
+  const arrow=new fabric.Path('M 0 0 L 140 0 L 130 -8 M 140 0 L 130 8',{
+    left:80,top:80,stroke:'#ff6b35',strokeWidth:3,fill:'',
+    borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false,
+    strokeLineCap:'round',strokeLineJoin:'round'
+  });
+  arrow._meta={type:'shape'};cv.add(arrow);cv.setActiveObject(arrow);objs.push(arrow);updateLayers();updateInfo();saveHistory();
+}
+
+// [FIX 7] 치수선 개선 - 화살표 끝 변형 없게 Group으로 구성
+function addDimension(){
+  if(!loaded)return;
+  // 선 본체
+  const line=new fabric.Line([20,0,180,0],{stroke:'#ffffff',strokeWidth:2,selectable:false,evented:false,strokeUniform:true});
+  // 왼쪽 화살표 (고정 크기)
+  const arL=new fabric.Path('M 20 0 L 34 -7 M 20 0 L 34 7',{stroke:'#ffffff',strokeWidth:2,fill:'',strokeLineCap:'round',selectable:false,evented:false});
+  // 오른쪽 화살표 (고정 크기)
+  const arR=new fabric.Path('M 180 0 L 166 -7 M 180 0 L 166 7',{stroke:'#ffffff',strokeWidth:2,fill:'',strokeLineCap:'round',selectable:false,evented:false});
+  const grp=new fabric.Group([line,arL,arR],{
+    left:80,top:80,
+    borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false,
+  });
+  grp._meta={type:'shape',isDim:true};
+  cv.add(grp);cv.setActiveObject(grp);objs.push(grp);
+
+  const txt=new fabric.Textbox('100cm',{
+    left:120,top:58,width:80,fontSize:14,fill:'#ffffff',
+    fontFamily:'Noto Sans KR',textAlign:'center',
+    borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false
+  });
+  txt._meta={type:'text'};cv.add(txt);objs.push(txt);
+  updateLayers();updateInfo();saveHistory();
+}
+
+// [FIX 5] 안내선 추가
+function addLine(style){
+  if(!loaded)return;
+  let strokeDash=[];
+  if(style==='dashed') strokeDash=[10,6];
+  else if(style==='dotted') strokeDash=[3,4];
+  else if(style==='long-dash') strokeDash=[20,8];
+
+  const line=new fabric.Line([0,0,200,0],{
+    left:50,top:200,
+    stroke:'#ff6b35',strokeWidth:2,
+    strokeDashArray:strokeDash,
+    fill:'',
+    borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false,
+    strokeLineCap:'round',
+  });
+  line._meta={type:'shape',lineStyle:style};
+  cv.add(line);cv.setActiveObject(line);objs.push(line);
+  updateLayers();updateInfo();saveHistory();
+}
+
+// ── 선택/속성 ──
+function onSel(){
+  const o=cv.getActiveObject();
+  if(!o||o===cv.getObjects()[0]){onDesel();return;}
+  sel=o;
+  document.getElementById('ns').style.display='none';
+  document.getElementById('props').style.display='block';
+  const isText=o.type==='textbox';
+  document.getElementById('text-props').style.display=isText?'block':'none';
+  syncP();hilite(o);
+}
+function onDesel(){sel=null;document.getElementById('ns').style.display='block';document.getElementById('props').style.display='none';}
+function syncP(){
+  if(!sel)return;
+  const isText=sel.type==='textbox';
+  if(isText){
+    document.getElementById('ptxt').value=sel.text||'';
+    const fsv=sel.fontSize||16;
+    document.getElementById('psz').value=fsv;
+    document.getElementById('pszn').value=fsv;
+    document.getElementById('pbold').value=sel.fontWeight||'normal';
+    document.getElementById('pfont').value=sel.fontFamily||'Noto Sans KR';
+    const tc=sel.fill||'#ffffff';
+    document.getElementById('pktxt').value=tc;
+    document.getElementById('swtxt').style.background=tc;
+    document.getElementById('pchex').value=tc;
+    ['left','center','right'].forEach(a=>document.getElementById('al-'+a).classList.remove('on'));
+    document.getElementById('al-'+(sel.textAlign||'left')).classList.add('on');
+    // [FIX 6] radius 동기화 (Textbox는 직접 지원 안 해서 _meta로 관리)
+    const rv=sel._meta?.radius||0;
+    document.getElementById('pradius').value=rv;
+    document.getElementById('pradiusn').value=rv;
+  }
+  const bg=isText?(sel.backgroundColor||''):(sel.fill||'');
+  document.getElementById('pkbg').value=bg||'#000000';
+  document.getElementById('swbg').style.background=bg||'transparent';
+  const sw=sel.stroke||'';
+  document.getElementById('pkstroke').value=sw||'#ffffff';
+  document.getElementById('swstroke').style.background=sw||'transparent';
+  document.getElementById('pstrokew').value=sel.strokeWidth||0;
+  document.getElementById('pstrokewv').textContent=sel.strokeWidth||0;
+  const op=Math.round((sel.opacity||1)*100);
+  document.getElementById('popacity').value=op;
+  document.getElementById('popacityv').textContent=op+'%';
+}
+
+function sp(t){
+  if(!sel)return;
+  if(t==='txt'){sel.set('text',document.getElementById('ptxt').value);updateLayers();}
+  if(t==='sz'){
+    const v=parseInt(document.getElementById('psz').value);
+    sel.set('fontSize',v);
+    document.getElementById('pszn').value=v;
+  }
+  // [FIX 2] px 직접 입력
+  if(t==='szn'){
+    const v=Math.max(8,Math.min(200,parseInt(document.getElementById('pszn').value)||16));
+    sel.set('fontSize',v);
+    document.getElementById('psz').value=v;
+    document.getElementById('pszn').value=v;
+  }
+  if(t==='bold')sel.set('fontWeight',document.getElementById('pbold').value);
+  if(t==='font')sel.set('fontFamily',document.getElementById('pfont').value);
+  if(t==='color'){const v=document.getElementById('pktxt').value;sel.set('fill',v);document.getElementById('swtxt').style.background=v;document.getElementById('pchex').value=v;}
+  if(t==='bg'){const v=document.getElementById('pkbg').value;document.getElementById('swbg').style.background=v;if(sel.type==='textbox')sel.set('backgroundColor',v);else sel.set('fill',v);}
+  if(t==='stroke'){const v=document.getElementById('pkstroke').value;sel.set('stroke',v);document.getElementById('swstroke').style.background=v;}
+  if(t==='strokew'){const v=parseInt(document.getElementById('pstrokew').value);sel.set('strokeWidth',v);document.getElementById('pstrokewv').textContent=v;}
+  if(t==='opacity'){const v=parseInt(document.getElementById('popacity').value);sel.set('opacity',v/100);document.getElementById('popacityv').textContent=v+'%';}
+  // [FIX 6] radius 슬라이더
+  if(t==='radius'){
+    const v=parseInt(document.getElementById('pradius').value);
+    document.getElementById('pradiusn').value=v;
+    applyRadius(sel,v);
+  }
+  if(t==='radiusn'){
+    const v=Math.max(0,Math.min(60,parseInt(document.getElementById('pradiusn').value)||0));
+    document.getElementById('pradius').value=v;
+    applyRadius(sel,v);
+  }
+  cv.requestRenderAll();
+}
+
+// [FIX 6] Textbox에 둥근 모서리 적용 - afterRender로 오버레이
+function applyRadius(obj,r){
+  if(!obj||obj.type!=='textbox')return;
+  if(!obj._meta)obj._meta={};
+  obj._meta.radius=r;
+  // Fabric Textbox는 natively radius 미지원 → clipPath로 구현
+  if(r>0){
+    const w=obj.width,h=obj.getScaledHeight?obj.getScaledHeight():obj.height||40;
+    const clip=new fabric.Rect({width:w+obj.padding*2,height:h+obj.padding*2,rx:r,ry:r,left:-(w/2+obj.padding),top:-(h/2+obj.padding)});
+    obj.set('clipPath',clip);
+  } else {
+    obj.set('clipPath',null);
+  }
+}
+
+function clearBg(){if(!sel)return;if(sel.type==='textbox')sel.set('backgroundColor','');else sel.set('fill','rgba(0,0,0,0)');document.getElementById('swbg').style.background='transparent';cv.requestRenderAll();}
+function clearStroke(){if(!sel)return;sel.set('stroke','');document.getElementById('swstroke').style.background='transparent';cv.requestRenderAll();}
+function setAl(a){
+  ['left','center','right'].forEach(x=>document.getElementById('al-'+x).classList.remove('on'));
+  document.getElementById('al-'+a).classList.add('on');
+  if(sel){sel.set('textAlign',a);cv.requestRenderAll();}
+}
+function bringFwd(){if(sel){cv.bringForward(sel);cv.requestRenderAll();}}
+function sendBwd(){if(sel){cv.sendBackwards(sel);cv.requestRenderAll();}}
+function duplicateObj(){
+  if(!sel)return;
+  sel.clone(c=>{c.set({left:sel.left+20,top:sel.top+20});c._meta={...sel._meta};cv.add(c);cv.setActiveObject(c);objs.push(c);updateLayers();updateInfo();saveHistory();});
+}
+function delSel(){
+  if(!sel)return;
+  objs=objs.filter(o=>o!==sel);
+  cv.remove(sel);cv.requestRenderAll();onDesel();updateLayers();updateInfo();saveHistory();
+}
+
+function saveHistory(){
+  const json=JSON.stringify(cv.toJSON(['_meta']));
+  history=history.slice(0,histIdx+1);
+  history.push(json);
+  if(history.length>30)history.shift();
+  histIdx=history.length-1;
+}
+function doUndo(){if(histIdx<=0)return;histIdx--;cv.loadFromJSON(history[histIdx],()=>{cv.requestRenderAll();rebuildObjs();});}
+function doRedo(){if(histIdx>=history.length-1)return;histIdx++;cv.loadFromJSON(history[histIdx],()=>{cv.requestRenderAll();rebuildObjs();});}
+function rebuildObjs(){objs=cv.getObjects().filter(o=>o.selectable);updateLayers();updateInfo();}
+
+function savePNG(){
+  if(!loaded){toast('이미지를 먼저 로드하세요','err');return;}
+  cv.discardActiveObject();cv.requestRenderAll();
+  const url=cv.toDataURL({format:'png',multiplier:1});
+  const a=document.createElement('a');a.href=url;a.download='happybiz_'+Date.now()+'.png';a.click();
+  toast('PNG 저장 완료','ok');
+}
+function saveJPG(){
+  if(!loaded){toast('이미지를 먼저 로드하세요','err');return;}
+  cv.discardActiveObject();cv.requestRenderAll();
+  const url=cv.toDataURL({format:'jpeg',quality:0.92,multiplier:1});
+  const a=document.createElement('a');a.href=url;a.download='happybiz_'+Date.now()+'.jpg';a.click();
+  toast('JPG 저장 완료','ok');
+}
+function clearAll(){
+  cv.clear();objs=[];loaded=false;origDataUrl=null;history=[];histIdx=-1;clipboard=null;
+  document.getElementById('wrap').style.display='none';
+  document.getElementById('ph').style.display='flex';
+  document.getElementById('isize').textContent='-';
+  onDesel();updateLayers();updateInfo();
+  document.getElementById('upzone').querySelector('.uptext').innerHTML='<strong>클릭 또는 드래그</strong>업로드 즉시 자동 번역';
+  ['s1','s2','s3','s4'].forEach((id,i)=>{
+    const msgs=['이미지 업로드 대기','텍스트 위치 감지','텍스트 제거','한국어 번역 삽입'];
+    const el=document.getElementById(id);el.textContent=msgs[i];el.className='st';
+  });
+  setStatus('대기 중');
+}
+
+function updateLayers(){
+  const el=document.getElementById('layers');
+  if(!objs.length){el.innerHTML='<div class="empty">레이어 없음</div>';return;}
+  el.innerHTML=objs.map((o,i)=>{
+    const t=o._meta&&o._meta.type;
+    const done=o._meta&&o._meta.translated;
+    const label=o.text||(t==='shape'?'도형':'레이어');
+    const p=label.slice(0,13)+(label.length>13?'…':'');
+    const dotClass=t==='shape'?'shape':(done?'done':'');
+    return `<div class="li" id="li-${i}" onclick="cv.setActiveObject(objs[${i}]);cv.requestRenderAll()">
+      <div class="ld ${dotClass}"></div>
+      <span class="lt">${p}</span>
+      <span class="lx" onclick="event.stopPropagation();objs[${i}]&&(cv.remove(objs[${i}]),objs.splice(${i},1),cv.requestRenderAll(),onDesel(),updateLayers(),updateInfo())">×</span>
+    </div>`;
+  }).join('');
+}
+function hilite(o){
+  document.querySelectorAll('.li').forEach(e=>e.classList.remove('on'));
+  const i=objs.indexOf(o);if(i>=0){const e=document.getElementById('li-'+i);if(e)e.classList.add('on');}
+}
+function updateInfo(){document.getElementById('icnt').textContent=objs.length;}
+function setStep(n,state,msg){
+  const el=document.getElementById('s'+n);
+  const defaults=['이미지 업로드 대기','텍스트 위치 감지','텍스트 제거','한국어 번역 삽입'];
+  if(state==='done'){el.textContent='✓ '+defaults[n-1];el.className='st done';}
+  else if(state==='err'){el.textContent='✗ '+(msg||defaults[n-1]);el.className='st err';}
+  else{el.textContent=(msg||defaults[n-1]);el.className='st run';}
+}
+function showOv(msg,sub){
+  document.getElementById('om').textContent=msg||'처리 중...';
+  document.getElementById('os').textContent=sub||'';
+  document.getElementById('ov').classList.add('show');
+  startEdPixelAnim();
+}
+function hideOv(){
+  document.getElementById('ov').classList.remove('show');
+  stopEdPixelAnim();
+}
+
+let _edPixelTimer=null, _edPixelFrame=0, _edLogTimer=null, _edLogIdx=0;
+const _edLogMessages=[
+  {cls:'work',msg:'> 이미지 분석 중...'},
+  {cls:'work',msg:'> GPT-4o 호출...'},
+  {cls:'ok',  msg:'> 텍스트 감지 완료 ✓'},
+  {cls:'work',msg:'> fal.ai 처리 중...'},
+  {cls:'work',msg:'> 배경 복원 중...'},
+  {cls:'ok',  msg:'> 처리 완료 ✓'},
+];
+
+function drawEdPixelChar(){
+  const canvas=document.getElementById('pixel-canvas-ed');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  ctx.clearRect(0,0,64,64);
+  // 책상
+  ctx.fillStyle='#3d2060';
+  ctx.fillRect(4,42,56,5);
+  // 모니터
+  ctx.fillStyle='#1a0f2e';
+  ctx.fillRect(14,14,36,24);
+  // 화면 (보라색 코드)
+  const sc=_edPixelFrame%2===0?'#a78bfa':'#7c3aed';
+  ctx.fillStyle=sc;
+  ctx.fillRect(17,17,20,2);
+  ctx.fillStyle='#4c1d95';
+  ctx.fillRect(17,21,14,2);
+  ctx.fillStyle=_edPixelFrame%3===0?'#f472b6':'#db2777';
+  ctx.fillRect(17,25,18,2);
+  ctx.fillStyle='#4c1d95';
+  ctx.fillRect(17,29,10,2);
+  // 모니터 받침
+  ctx.fillStyle='#1a0f2e';
+  ctx.fillRect(26,36,12,6);
+  // 키보드
+  ctx.fillStyle='#2d1b4e';
+  ctx.fillRect(18,43,28,4);
+  // 몸통
+  ctx.fillStyle='#a78bfa';
+  ctx.fillRect(22,28,12,10);
+  // 머리
+  ctx.fillStyle='#c4b5fd';
+  ctx.fillRect(24,18,10,10);
+  // 머리카락
+  ctx.fillStyle='#1e1b4b';
+  ctx.fillRect(24,18,10,3);
+  ctx.fillRect(24,18,2,6);
+  // 눈
+  if(_edPixelFrame%8<7){
+    ctx.fillStyle='#0a0a0a';
+    ctx.fillRect(26,22,2,2);
+    ctx.fillRect(30,22,2,2);
+  }else{
+    ctx.fillStyle='#0a0a0a';
+    ctx.fillRect(26,23,2,1);
+    ctx.fillRect(30,23,2,1);
+  }
+  // 팔 타이핑
+  ctx.fillStyle='#a78bfa';
+  const ay=_edPixelFrame%4<2?36:37;
+  ctx.fillRect(16,ay,6,3);
+  ctx.fillRect(34,ay,6,3);
+  ctx.fillStyle='#c4b5fd';
+  ctx.fillRect(14,ay+1,3,2);
+  ctx.fillRect(38,ay+1,3,2);
+}
+
+function startEdPixelAnim(){
+  if(_edPixelTimer)return;
+  _edPixelFrame=0; _edLogIdx=0;
+  drawEdPixelChar();
+  _edPixelTimer=setInterval(()=>{_edPixelFrame++;drawEdPixelChar();},150);
+  _addEdLogLine(_edLogMessages[0].cls,_edLogMessages[0].msg);
+  _edLogTimer=setInterval(()=>{
+    _edLogIdx=(_edLogIdx+1)%_edLogMessages.length;
+    _addEdLogLine(_edLogMessages[_edLogIdx].cls,_edLogMessages[_edLogIdx].msg);
+  },2000);
+}
+
+function stopEdPixelAnim(){
+  if(_edPixelTimer){clearInterval(_edPixelTimer);_edPixelTimer=null;}
+  if(_edLogTimer){clearInterval(_edLogTimer);_edLogTimer=null;}
+  _addEdLogLine('ok','> 완료! ✓');
+}
+
+function _addEdLogLine(cls,msg){
+  const log=document.getElementById('pix-log-ed');
+  if(!log)return;
+  const line=document.createElement('div');
+  line.className='pix-log-line '+cls;
+  line.textContent=msg;
+  log.appendChild(line);
+  while(log.children.length>4)log.removeChild(log.firstChild);
+}
+function setStatus(msg,t){document.getElementById('stxt').textContent=msg;const d=document.getElementById('sdot');d.className='sdot'+(t?' '+t:'');}
+let _t;
+function toast(msg,t){const e=document.getElementById('toast');e.textContent=msg;e.className='toast show'+(t?' '+t:'');clearTimeout(_t);_t=setTimeout(()=>e.classList.remove('show'),3000);}
+
+
+/* ===== 메인이미지 탭 전체 JS ===== */
+
+// 전역 변수
+let miCvObj=null, miObjs2=[], miSel2=null;
+let miHistory2=[], miHistIdx2=-1;
+let miSlots={orig:null,bg:null,design:null};
+let miResultUrl=null;
+let miSize=1000, miFmt='png';
+let _pixelTimer=null;
+
+// 탭 전환
+function switchTab(tab){
+  const editorContent=document.getElementById('tab-editor-content');
+  const mainContent=document.getElementById('tab-main-content');
+  const editorBtn=document.getElementById('tab-editor');
+  const mainBtn=document.getElementById('tab-main');
+  const miDlGroup=document.getElementById('mi-dl-group');
+  const zoomBtns=document.querySelectorAll('.undo-btn:not(#mi-undo-btn), #zoom-label');
+  const editBtns=document.querySelectorAll('.actions .ghost:not(#mi-clear-btn), .actions .primary:not(#mi-undo-btn)');
+  if(tab==='editor'){
+    editorContent.style.display='flex';
+    mainContent.classList.remove('show');
+    editorBtn.classList.add('active'); mainBtn.classList.remove('active');
+    zoomBtns.forEach(el=>el.style.display='');
+    editBtns.forEach(el=>el.style.display='');
+    miDlGroup.classList.remove('show');
+  } else {
+    editorContent.style.display='none';
+    mainContent.classList.add('show');
+    editorBtn.classList.remove('active'); mainBtn.classList.add('active');
+    zoomBtns.forEach(el=>el.style.display='none');
+    editBtns.forEach(el=>el.style.display='none');
+    miDlGroup.classList.add('show');
+    setTimeout(miInitCanvas, 50);
+  }
+}
+
+// 픽셀 캐릭터 (컴퓨터 앞에서 타이핑)
+let _pixelFrame=0;
+const _logMessages=[
+  {cls:'work',msg:'> 이미지 분석 중...'},
+  {cls:'work',msg:'> 프롬프트 최적화...'},
+  {cls:'work',msg:'> Flux API 호출...'},
+  {cls:'ok',  msg:'> 모델 로딩 완료 ✓'},
+  {cls:'work',msg:'> 픽셀 렌더링 중...'},
+  {cls:'work',msg:'> 배경 합성 중...'},
+  {cls:'ok',  msg:'> 이미지 생성 완료!'},
+  {cls:'work',msg:'> R2 업로드 중...'},
+];
+let _logIdx=0;
+let _logTimer=null;
+
+function drawPixelChar(){
+  const canvas=document.getElementById('pixel-canvas');
+  if(!canvas)return;
+  const ctx=canvas.getContext('2d');
+  const p=6;
+  ctx.clearRect(0,0,64,64);
+
+  // 책상
+  ctx.fillStyle='#5c3d1a';
+  ctx.fillRect(4,42,56,5);
+
+  // 모니터 받침
+  ctx.fillStyle='#1a1a2e';
+  ctx.fillRect(26,36,12,6);
+
+  // 모니터
+  ctx.fillStyle='#0f1929';
+  ctx.fillRect(14,14,36,24);
+  // 화면 (깜빡이는 코드 라인)
+  const screenColor=_pixelFrame%2===0?'#7fdbca':'#4ecb71';
+  ctx.fillStyle=screenColor;
+  ctx.fillRect(17,17,20,2);
+  ctx.fillStyle='#3a5a8a';
+  ctx.fillRect(17,21,14,2);
+  ctx.fillStyle=_pixelFrame%3===0?'#ff6b35':'#cc4010';
+  ctx.fillRect(17,25,18,2);
+  ctx.fillStyle='#3a5a8a';
+  ctx.fillRect(17,29,10,2);
+
+  // 키보드
+  ctx.fillStyle='#2a2a3a';
+  ctx.fillRect(18,43,28,4);
+
+  // 캐릭터 몸통
+  ctx.fillStyle='#ff6b35';
+  ctx.fillRect(22,28,12,10); // 몸
+
+  // 머리
+  ctx.fillStyle='#ff8555';
+  ctx.fillRect(24,18,10,10);
+
+  // 머리카락
+  ctx.fillStyle='#2c1810';
+  ctx.fillRect(24,18,10,3);
+  ctx.fillRect(24,18,2,6);
+
+  // 눈 (깜빡임)
+  if(_pixelFrame%8<7){
+    ctx.fillStyle='#0a0a0a';
+    ctx.fillRect(26,22,2,2);
+    ctx.fillRect(30,22,2,2);
+  }else{
+    ctx.fillStyle='#0a0a0a';
+    ctx.fillRect(26,23,2,1);
+    ctx.fillRect(30,23,2,1);
+  }
+
+  // 팔 (타이핑 애니메이션)
+  ctx.fillStyle='#ff6b35';
+  const armY=_pixelFrame%4<2?36:37;
+  ctx.fillRect(16,armY,6,3); // 왼팔
+  ctx.fillRect(34,armY,6,3); // 오른팔
+
+  // 손가락
+  ctx.fillStyle='#ffaa80';
+  ctx.fillRect(14,armY+1,3,2);
+  ctx.fillRect(38,armY+1,3,2);
+}
+
+function startPixelAnim(){
+  if(_pixelTimer)return;
+  _pixelFrame=0;
+  _logIdx=0;
+  drawPixelChar();
+  _pixelTimer=setInterval(()=>{
+    _pixelFrame++;
+    drawPixelChar();
+  },150);
+  // 로그 메시지 순환
+  _addLogLine(_logMessages[0].cls,_logMessages[0].msg);
+  _logTimer=setInterval(()=>{
+    _logIdx=(_logIdx+1)%_logMessages.length;
+    _addLogLine(_logMessages[_logIdx].cls,_logMessages[_logIdx].msg);
+  },2200);
+}
+
+function stopPixelAnim(){
+  if(_pixelTimer){clearInterval(_pixelTimer);_pixelTimer=null;}
+  if(_logTimer){clearInterval(_logTimer);_logTimer=null;}
+  _addLogLine('ok','> 완료! ✓');
+}
+
+function _addLogLine(cls,msg){
+  const log=document.getElementById('pix-log');
+  if(!log)return;
+  const line=document.createElement('div');
+  line.className='pix-log-line '+cls;
+  line.textContent=msg;
+  log.appendChild(line);
+  while(log.children.length>4)log.removeChild(log.firstChild);
+}
+
+// 캔버스 초기화
+function miInitCanvas(){
+  if(window.miCvObj){window.miCvObj.requestRenderAll();return;}
+  try{
+    window.miCvObj=new fabric.Canvas('mi-c',{preserveObjectStacking:true});
+    window.miCvObj.on('selection:created',miOnSel);
+    window.miCvObj.on('selection:updated',miOnSel);
+    window.miCvObj.on('selection:cleared',miOnDesel);
+    window.miCvObj.on('object:modified',()=>miSaveHistory());
+  }catch(e){console.error('miInitCanvas:',e);}
+}
+
+// 메인이미지 탭 키보드 단축키
+document.addEventListener('keydown',function(e){
+  const mainActive=document.getElementById('tab-main-content')&&document.getElementById('tab-main-content').classList.contains('show');
+  if(!mainActive||!window.miCvObj)return;
+  const tag=document.activeElement.tagName;
+  const isInput=(tag==='TEXTAREA'||tag==='INPUT');
+  if(isInput)return;
+  // Ctrl+Z 되돌리기
+  if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();miUndo();return;}
+  if((e.ctrlKey||e.metaKey)&&e.key==='y'){e.preventDefault();miRedo();return;}
+  // Del/Backspace 삭제
+  if((e.key==='Delete'||e.key==='Backspace')&&miSel2){e.preventDefault();miDelSel();return;}
+  // 방향키 이동 (1px, Shift=10px)
+  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'].includes(e.key)&&miSel2){
+    e.preventDefault();
+    const step=e.shiftKey?10:1;
+    if(e.key==='ArrowLeft') miSel2.set('left',miSel2.left-step);
+    if(e.key==='ArrowRight') miSel2.set('left',miSel2.left+step);
+    if(e.key==='ArrowUp') miSel2.set('top',miSel2.top-step);
+    if(e.key==='ArrowDown') miSel2.set('top',miSel2.top+step);
+    miSel2.setCoords();
+    window.miCvObj.requestRenderAll();
+  }
+});
+
+function miResizeCanvas(){
+  const img=document.getElementById('mi-result-img');
+  if(!img||!window.miCvObj)return;
+  const w=img.offsetWidth, h=img.offsetHeight;
+  if(!w||!h)return;
+  window.miCvObj.setWidth(w);
+  window.miCvObj.setHeight(h);
+  const container=document.querySelector('#mi-result-wrap .canvas-container');
+  if(container){container.style.position='absolute';container.style.top='0';container.style.left='0';container.style.width=w+'px';container.style.height=h+'px';}
+  window.miCvObj.requestRenderAll();
+  // 초기 상태 히스토리에 없으면 저장
+  if(miHistory2.length===0) miSaveHistory();
+}
+
+// 선택 이벤트
+function miOnSel(){
+  miSel2=window.miCvObj.getActiveObject();
+  document.getElementById('mi-ns').style.display='none';
+  document.getElementById('mi-props-detail').style.display='block';
+  miSyncProps();
+}
+function miOnDesel(){
+  miSel2=null;
+  document.getElementById('mi-ns').style.display='block';
+  document.getElementById('mi-props-detail').style.display='none';
+}
+
+// 속성 동기화
+function miSyncProps(){
+  if(!miSel2)return;
+  const isText=miSel2.type==='textbox'||miSel2.type==='text';
+  document.getElementById('mi-text-props').style.display=isText?'block':'none';
+  if(isText){
+    if(miSel2.text!==undefined) document.getElementById('mi-ptxt').value=miSel2.text;
+    if(miSel2.fontFamily){const s=document.getElementById('mi-pfont');for(let o of s.options)if(o.value===miSel2.fontFamily){s.value=miSel2.fontFamily;break;}}
+    if(miSel2.fontSize){document.getElementById('mi-psz').value=miSel2.fontSize;document.getElementById('mi-pszn').value=miSel2.fontSize;}
+    document.getElementById('mi-pbold').value=miSel2.fontWeight==='bold'?'bold':'normal';
+    const fc=miSel2.fill||'#ffffff';document.getElementById('mi-swtxt').style.background=fc;document.getElementById('mi-pchex').value=fc;
+    if(miSel2.textAlign){['left','center','right'].forEach(a=>document.getElementById('mi-al-'+a).classList.remove('on'));const el=document.getElementById('mi-al-'+miSel2.textAlign);if(el)el.classList.add('on');}
+  }
+  // 공통 속성 (도형 포함)
+  const bg=isText?(miSel2.backgroundColor||''):(miSel2.fill||'');
+  document.getElementById('mi-swbg').style.background=bg||'transparent';
+  if(miSel2.stroke){document.getElementById('mi-swstroke').style.background=miSel2.stroke;}
+  if(miSel2.strokeWidth!==undefined){document.getElementById('mi-pstrokew').value=miSel2.strokeWidth;document.getElementById('mi-pstrokewv').textContent=miSel2.strokeWidth;}
+  if(miSel2.opacity!==undefined){const op=Math.round(miSel2.opacity*100);document.getElementById('mi-popacity').value=op;document.getElementById('mi-popacityv').textContent=op+'%';}
+  const pw=document.getElementById('mi-pw');const ph=document.getElementById('mi-ph');
+  if(pw&&ph){pw.value=Math.round((miSel2.width||0)*miSel2.scaleX);ph.value=Math.round((miSel2.height||miSel2.radius*2||0)*miSel2.scaleY);}
+}
+
+// 속성 변경
+function miSp(t){
+  if(!miSel2)return;
+  if(t==='txt'){miSel2.set('text',document.getElementById('mi-ptxt').value);}
+  if(t==='font'){miSel2.set('fontFamily',document.getElementById('mi-pfont').value);}
+  if(t==='sz'){const v=parseInt(document.getElementById('mi-psz').value);document.getElementById('mi-pszn').value=v;miSel2.set('fontSize',v);}
+  if(t==='szn'){const v=parseInt(document.getElementById('mi-pszn').value);document.getElementById('mi-psz').value=v;miSel2.set('fontSize',v);}
+  if(t==='bold'){miSel2.set('fontWeight',document.getElementById('mi-pbold').value);}
+  if(t==='color'){const v=document.getElementById('mi-pktxt').value;document.getElementById('mi-swtxt').style.background=v;document.getElementById('mi-pchex').value=v;miSel2.set('fill',v);}
+  if(t==='bg'){const v=document.getElementById('mi-pkbg').value;document.getElementById('mi-swbg').style.background=v;if(miSel2.type==='textbox')miSel2.set('backgroundColor',v);else miSel2.set('fill',v);}
+  if(t==='stroke'){const v=document.getElementById('mi-pkstroke').value;document.getElementById('mi-swstroke').style.background=v;miSel2.set('stroke',v);}
+  if(t==='strokew'){const v=parseInt(document.getElementById('mi-pstrokew').value);document.getElementById('mi-pstrokewv').textContent=v;miSel2.set('strokeWidth',v);}
+  if(t==='opacity'){const v=parseInt(document.getElementById('mi-popacity').value);document.getElementById('mi-popacityv').textContent=v+'%';miSel2.set('opacity',v/100);}
+  if(t==='w'){const v=parseInt(document.getElementById('mi-pw').value);if(v>0){miSel2.set('width',v/miSel2.scaleX);}}
+  if(t==='h'){const v=parseInt(document.getElementById('mi-ph').value);if(v>0){miSel2.set('height',v/miSel2.scaleY);}}
+  if(t==='radius'||t==='radiusn'){const v=parseInt(document.getElementById(t==='radius'?'mi-pradius':'mi-pradiusn').value);document.getElementById('mi-pradius').value=v;document.getElementById('mi-pradiusn').value=v;applyRadius(miSel2,v);}
+  window.miCvObj&&window.miCvObj.requestRenderAll();
+}
+function miSetAl(a){['left','center','right'].forEach(x=>document.getElementById('mi-al-'+x).classList.remove('on'));document.getElementById('mi-al-'+a).classList.add('on');if(miSel2){miSel2.set('textAlign',a);window.miCvObj.requestRenderAll();}}
+function miClearBg(){if(!miSel2)return;if(miSel2.type==='textbox')miSel2.set('backgroundColor','');else miSel2.set('fill','rgba(0,0,0,0)');document.getElementById('mi-swbg').style.background='transparent';window.miCvObj.requestRenderAll();}
+function miClearStroke(){if(!miSel2)return;miSel2.set('stroke','');document.getElementById('mi-swstroke').style.background='transparent';window.miCvObj.requestRenderAll();}
+
+// 히스토리
+function miSaveHistory(){
+  if(!window.miCvObj)return;
+  const json=JSON.stringify(window.miCvObj.toJSON(['_meta']));
+  miHistory2=miHistory2.slice(0,miHistIdx2+1);
+  miHistory2.push(json);
+  if(miHistory2.length>20)miHistory2.shift();
+  miHistIdx2=miHistory2.length-1;
+}
+function miUndo(){
+  if(!window.miCvObj||miHistIdx2<=0||miHistory2.length===0)return;
+  miHistIdx2--;
+  if(miHistIdx2<0){miHistIdx2=0;return;}
+  window.miCvObj.loadFromJSON(miHistory2[miHistIdx2],()=>{
+    window.miCvObj.requestRenderAll();
+    miObjs2=window.miCvObj.getObjects().filter(o=>o.selectable);
+    miOnDesel();
+    toast('되돌리기','ok');
+  });
+}
+function miRedo(){
+  if(!window.miCvObj||miHistIdx2>=miHistory2.length-1)return;
+  miHistIdx2++;
+  window.miCvObj.loadFromJSON(miHistory2[miHistIdx2],()=>{
+    window.miCvObj.requestRenderAll();
+    miObjs2=window.miCvObj.getObjects().filter(o=>o.selectable);
+    miOnDesel();
+    toast('다시실행','ok');
+  });
+}
+
+// 도구 함수
+function miAddText(){
+  if(!window.miCvObj){miInitCanvas();return;}
+  const t=new fabric.Textbox('텍스트 입력',{left:50,top:50,width:200,fontSize:28,fill:'#ffffff',fontFamily:'Noto Sans KR',borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false,padding:3});
+  window.miCvObj.add(t);window.miCvObj.setActiveObject(t);miObjs2.push(t);miSaveHistory();
+}
+function miAddRect(){
+  if(!window.miCvObj){miInitCanvas();return;}
+  const r=new fabric.Rect({left:50,top:50,width:150,height:80,fill:'rgba(255,107,53,0.3)',stroke:'#ff6b35',strokeWidth:2,borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false});
+  window.miCvObj.add(r);window.miCvObj.setActiveObject(r);miObjs2.push(r);miSaveHistory();
+}
+function miAddCircle(){
+  if(!window.miCvObj){miInitCanvas();return;}
+  const c=new fabric.Circle({left:50,top:50,radius:50,fill:'rgba(255,107,53,0.3)',stroke:'#ff6b35',strokeWidth:2,borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false});
+  window.miCvObj.add(c);window.miCvObj.setActiveObject(c);miObjs2.push(c);miSaveHistory();
+}
+function miAddRoundRect(){
+  if(!window.miCvObj){miInitCanvas();return;}
+  const r=new fabric.Rect({left:50,top:50,width:150,height:60,fill:'rgba(255,107,53,0.3)',stroke:'#ff6b35',strokeWidth:2,rx:12,ry:12,borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false});
+  window.miCvObj.add(r);window.miCvObj.setActiveObject(r);miObjs2.push(r);miSaveHistory();
+}
+function miAddArrow(){
+  if(!window.miCvObj){miInitCanvas();return;}
+  const arrow=new fabric.Path('M 0 0 L 140 0 L 130 -8 M 140 0 L 130 8',{stroke:'#ff6b35',strokeWidth:2,fill:'',strokeLineCap:'round',borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false,strokeUniform:true});
+  window.miCvObj.add(arrow);window.miCvObj.setActiveObject(arrow);miObjs2.push(arrow);miSaveHistory();
+}
+function miAddDimension(){
+  if(!window.miCvObj){miInitCanvas();return;}
+  const line=new fabric.Line([20,0,180,0],{stroke:'#ffffff',strokeWidth:2,selectable:false,evented:false,strokeUniform:true});
+  const arL=new fabric.Path('M 20 0 L 34 -7 M 20 0 L 34 7',{stroke:'#ffffff',strokeWidth:2,fill:'',strokeLineCap:'round',selectable:false,evented:false});
+  const arR=new fabric.Path('M 180 0 L 166 -7 M 180 0 L 166 7',{stroke:'#ffffff',strokeWidth:2,fill:'',strokeLineCap:'round',selectable:false,evented:false});
+  const grp=new fabric.Group([line,arL,arR],{left:50,top:80,borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false});
+  const txt=new fabric.Textbox('100cm',{left:80,top:60,width:60,fontSize:14,fill:'#ffffff',fontFamily:'Noto Sans KR',textAlign:'center',borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false});
+  window.miCvObj.add(grp);window.miCvObj.add(txt);window.miCvObj.setActiveObject(txt);miObjs2.push(grp,txt);miSaveHistory();
+}
+function miAddLine(style){
+  if(!window.miCvObj){miInitCanvas();return;}
+  const da=style==='dashed'?[8,4]:style==='dotted'?[2,4]:style==='long-dash'?[16,6]:null;
+  const line=new fabric.Line([0,0,200,0],{left:50,top:100,stroke:'#ffffff',strokeWidth:2,strokeDashArray:da,borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false,padding:5,strokeUniform:true,lockScalingY:true});
+  window.miCvObj.add(line);window.miCvObj.setActiveObject(line);miObjs2.push(line);miSaveHistory();
+}
+function miAddSymbol(s){
+  if(!window.miCvObj){miInitCanvas();return;}
+  const t=new fabric.Text(s,{left:100,top:100,fontSize:40,fill:'#ff6b35',fontFamily:'Noto Sans KR',borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,transparentCorners:false,lockUniScaling:true});
+  window.miCvObj.add(t);window.miCvObj.setActiveObject(t);miObjs2.push(t);miSaveHistory();
+}
+function miBringFwd(){if(miSel2&&window.miCvObj){window.miCvObj.bringForward(miSel2);window.miCvObj.requestRenderAll();}}
+function miSendBwd(){if(miSel2&&window.miCvObj){window.miCvObj.sendBackwards(miSel2);window.miCvObj.requestRenderAll();}}
+function miDuplicate(){if(!miSel2||!window.miCvObj)return;miSel2.clone(c=>{c.set({left:miSel2.left+20,top:miSel2.top+20});window.miCvObj.add(c);window.miCvObj.setActiveObject(c);miObjs2.push(c);miSaveHistory();});}
+function miDelSel(){if(!miSel2||!window.miCvObj)return;miObjs2=miObjs2.filter(o=>o!==miSel2);window.miCvObj.remove(miSel2);window.miCvObj.requestRenderAll();miOnDesel();miSaveHistory();}
+
+// 슬롯
+function miSlotLoad(inp,key){
+  const file=inp.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{miSlots[key]=e.target.result;const preview=document.getElementById('slot-'+key+'-preview');const img=document.getElementById('slot-'+key+'-img');if(preview&&img){img.src=e.target.result;preview.style.display='block';document.getElementById('slot-'+key).classList.add('filled');}};
+  reader.readAsDataURL(file);
+}
+function miSlotClear(key){miSlots[key]=null;const preview=document.getElementById('slot-'+key+'-preview');if(preview)preview.style.display='none';document.getElementById('slot-'+key).classList.remove('filled');const inp=document.querySelector('#slot-'+key+' input');if(inp)inp.value='';}
+function miSlotDrop(event,key){const file=event.dataTransfer.files[0];if(!file||!file.type.startsWith('image/'))return;const reader=new FileReader();reader.onload=e=>{miSlots[key]=e.target.result;const preview=document.getElementById('slot-'+key+'-preview');const img=document.getElementById('slot-'+key+'-img');if(preview&&img){img.src=e.target.result;preview.style.display='block';document.getElementById('slot-'+key).classList.add('filled');}};reader.readAsDataURL(file);}
+
+// 프리셋
+function miPreset(text){
+  const ta=document.getElementById('mi-prompt');ta.value=text;
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.toggle('on',b.getAttribute('onclick').includes(text.replace(/'/g,"\'"))));
+}
+
+// 이미지 생성
+async function miGenerate(){
+  if(!miSlots.orig){toast('원본 이미지를 먼저 업로드하세요','err');return;}
+  const prompt=document.getElementById('mi-prompt').value.trim();
+  if(!prompt){toast('프롬프트를 입력하세요','err');return;}
+  const btn=document.getElementById('mi-gen-btn');
+  btn.disabled=true;
+  miShowOv('이미지 생성 중...','fal.ai Flux Kontext 작업 중\n잠깐만요! (10~30초)');
+  miSetStep(1,'done');
+  try{
+    miSetStep(2,'run','업로드 중...');
+    const origUrl=await uploadR2(miSlots.orig,'mi_orig_'+Date.now()+'.jpg','image/jpeg');
+    miSetStep(2,'done');
+    const fixedPrompt=prompt+'. Remove all existing text and watermarks. Do not add any new text. Keep the main product exactly as is, only change the background. Square 1:1 ratio output.';
+    const falBody={model:'fal-ai/flux-pro/kontext',image_url:origUrl,prompt:fixedPrompt,guidance_scale:3.5,num_inference_steps:28};
+    if(miSlots.bg||miSlots.design){
+      const refs=[];
+      if(miSlots.bg){const u=await uploadR2(miSlots.bg,'mi_bg_'+Date.now()+'.jpg','image/jpeg');refs.push(u);}
+      if(miSlots.design){const u=await uploadR2(miSlots.design,'mi_ds_'+Date.now()+'.jpg','image/jpeg');refs.push(u);}
+      if(refs.length)falBody.reference_images=refs;
+    }
+    miSetStep(3,'run','생성 중...');
+    const falRes=await fetch(WORKER+'/fal-run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(falBody)});
+    const falData=await falRes.json();
+    console.log('[fal response]',JSON.stringify(falData).slice(0,400));
+    if(falData.detail||falData.error)throw new Error(JSON.stringify(falData.detail||falData.error));
+    const resultUrl=falData?.images?.[0]?.url||falData?.image?.url||falData?.output?.images?.[0]?.url||null;
+    if(!resultUrl)throw new Error('결과 URL 없음. 응답: '+JSON.stringify(Object.keys(falData||{})));
+    miResultUrl=resultUrl;
+    const resultImg=document.getElementById('mi-result-img');
+    const placeholder=document.getElementById('mi-placeholder');
+    const resultWrap=document.getElementById('mi-result-wrap');
+    resultImg.onload=()=>{
+      if(!window.miCvObj)miInitCanvas();
+      setTimeout(()=>{miResizeCanvas();setTimeout(miResizeCanvas,200);},50);
+    };
+    resultImg.src=resultUrl;
+    resultImg.style.display='block';
+    placeholder.style.display='none';
+    resultWrap.style.display='inline-block';
+    miSetStep(3,'done');miSetStep(4,'done');
+    toast('이미지 생성 완료!','ok');miSetStatus('완료 ✓');
+  }catch(e){
+    toast('생성 실패: '+e.message,'err');miSetStatus('오류');miSetStep(3,'err','생성 실패');
+  }finally{
+    miHideOv();btn.disabled=false;
+  }
+}
+
+// 다운로드
+function miSetSize(s){miSize=s;['sz500','sz1000','sz1200','szOrig'].forEach(id=>document.getElementById(id).classList.toggle('on',id==='sz'+s||(s===0&&id==='szOrig')));}
+function miSetFmt(f){miFmt=f;['fmtjpg','fmtpng'].forEach(id=>document.getElementById(id).classList.toggle('on',id==='fmt'+f));}
+function miDownload(){
+  if(!miResultUrl){toast('생성된 이미지가 없습니다','err');return;}
+  const img=new Image();img.crossOrigin='anonymous';
+  img.onload=()=>{
+    const fmt=miFmt==='png'?'image/png':'image/jpeg';
+    const ext=miFmt==='png'?'png':'jpg';
+    const canvas=document.createElement('canvas');
+    if(miSize===0){
+      // 원본 비율 그대로
+      canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+      canvas.getContext('2d').drawImage(img,0,0);
+    } else {
+      // 정사각형 letterbox (흰 배경)
+      canvas.width=miSize;canvas.height=miSize;
+      const ctx=canvas.getContext('2d');
+      ctx.fillStyle='#ffffff';ctx.fillRect(0,0,miSize,miSize);
+      const ratio=Math.min(miSize/img.naturalWidth,miSize/img.naturalHeight);
+      const w=Math.round(img.naturalWidth*ratio);
+      const h=Math.round(img.naturalHeight*ratio);
+      ctx.drawImage(img,(miSize-w)/2,(miSize-h)/2,w,h);
+    }
+    const url=canvas.toDataURL(fmt,miFmt==='jpg'?0.92:1);
+    const label=miSize===0?'orig':miSize+'x'+miSize;
+    const a=document.createElement('a');a.href=url;a.download='happybiz_main_'+label+'_'+Date.now()+'.'+ext;a.click();
+    toast(label+' '+ext.toUpperCase()+' 저장 완료','ok');
+  };
+  img.onerror=()=>{const a=document.createElement('a');a.href=miResultUrl;a.download='happybiz_main_'+Date.now()+'.'+miFmt;a.target='_blank';a.click();};
+  img.src=miResultUrl;
+}
+
+// 초기화
+function miClearAll(){
+  ['orig','bg','design'].forEach(k=>miSlotClear(k));
+  const wrap=document.getElementById('mi-result-wrap');
+  const placeholder=document.getElementById('mi-placeholder');
+  if(wrap)wrap.style.display='none';
+  if(placeholder)placeholder.style.display='flex';
+  if(window.miCvObj){window.miCvObj.clear();miObjs2=[];}
+  miHistory2=[];miHistIdx2=-1;miResultUrl=null;
+  document.getElementById('mi-prompt').value='';
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('on'));
+  miSetStatus('대기중');miResetSteps();
+  toast('초기화 완료','ok');
+}
+
+// 진행상태
+function miShowOv(msg,sub){document.getElementById('mi-ov-msg').textContent=msg||'처리 중...';document.getElementById('mi-ov-sub').innerHTML=(sub||'').replace(/\n/g,'<br>');document.getElementById('mi-overlay').classList.add('show');startPixelAnim();}
+function miHideOv(){document.getElementById('mi-overlay').classList.remove('show');stopPixelAnim();}
+function miSetStatus(msg){document.getElementById('mi-status').textContent=msg;}
+function miSetStep(n,state,msg){
+  const el=document.getElementById('mi-s'+n);if(!el)return;
+  const defaults=['원본 이미지 대기','R2 업로드','이미지 생성','완료'];
+  if(state==='done'){el.textContent='✓ '+defaults[n-1];el.className='st done';}
+  else if(state==='err'){el.textContent='✗ '+(msg||defaults[n-1]);el.className='st err';}
+  else{el.textContent=(msg||defaults[n-1]);el.className='st run';}
+}
+function miResetSteps(){const defaults=['원본 이미지 대기','R2 업로드','이미지 생성','완료'];[1,2,3,4].forEach((n,i)=>{const el=document.getElementById('mi-s'+n);if(el){el.textContent=defaults[i];el.className='st';}});}
+</script>
+</body>
+</html>
