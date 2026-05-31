@@ -9,15 +9,6 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:'Noto Sans KR',sans-serif;background:#0f0f0f;color:#e8e8e8;height:100vh;overflow:hidden;display:flex;flex-direction:column}
-.login-screen{position:fixed;inset:0;background:#0f0f0f;display:flex;align-items:center;justify-content:center;z-index:9999;flex-direction:column;gap:20px}
-.login-box{background:#161616;border:1px solid #2a2a2a;border-radius:12px;padding:40px;width:320px;text-align:center}
-.login-logo{font-family:'Space Mono',monospace;font-size:18px;color:#ff6b35;font-weight:700;letter-spacing:3px;margin-bottom:6px}
-.login-sub{font-size:11px;color:#444;margin-bottom:28px}
-.login-input{width:100%;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:6px;color:#e8e8e8;padding:10px 14px;font-size:14px;outline:none;text-align:center;letter-spacing:4px;font-family:'Space Mono',monospace;margin-bottom:12px}
-.login-input:focus{border-color:#ff6b35}
-.login-btn{width:100%;background:#ff6b35;color:#000;font-weight:700;border:none;border-radius:6px;padding:10px;font-size:13px;cursor:pointer;font-family:'Noto Sans KR',sans-serif}
-.login-btn:hover{background:#ff8555}
-.login-err{color:#f87171;font-size:11px;margin-top:8px;display:none}
 .topbar{display:flex;align-items:center;justify-content:space-between;padding:0 16px;height:48px;background:#161616;border-bottom:1px solid #2a2a2a;flex-shrink:0}
 .logo{font-family:'Space Mono',monospace;font-size:12px;color:#ff6b35;font-weight:700;letter-spacing:2px}
 .badge{background:#ff6b35;color:#000;font-size:8px;font-weight:700;padding:2px 5px;border-radius:2px}
@@ -162,16 +153,6 @@ select.pi{cursor:pointer}
 </style>
 </head>
 <body>
-
-<div class="login-screen" id="login-screen">
-  <div class="login-box">
-    <div class="login-logo">HAPPYBIZ</div>
-    <div class="login-sub">IMAGE EDITOR</div>
-    <input type="password" class="login-input" id="login-pw" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="login-btn" onclick="doLogin()">입장</button>
-    <div class="login-err" id="login-err">비밀번호가 틀렸습니다</div>
-  </div>
-</div>
 
 <div class="topbar">
   <div style="display:flex;align-items:center;gap:10px">
@@ -563,24 +544,12 @@ select.pi{cursor:pointer}
 <div class="toast" id="toast"></div>
 
 <script>
-const PASS = 'govl*1111';
 const WORKER = 'https://proxy.wonflowai.com';
 // [FIX 4] 860px 기준 폰트 사이즈 단계 (큰→작은 순)
 const FONT_SIZES = [36, 28, 22, 16, 12];
 // 860px 고정 캔버스 폭
 const CANVAS_W = 860;
 
-function doLogin(){
-  const v=document.getElementById('login-pw').value;
-  if(v===PASS){
-    document.getElementById('login-screen').style.display='none';
-    sessionStorage.setItem('hb_auth','1');
-  } else {
-    document.getElementById('login-err').style.display='block';
-    document.getElementById('login-pw').value='';
-  }
-}
-if(sessionStorage.getItem('hb_auth')==='1') document.getElementById('login-screen').style.display='none';
 
 const SYMBOLS=['♡','♥','★','☆','✦','✧','✨','✱','•','·','→','←','↑','↓','↔','↕','↗','↙','~','!','?','♪','♫','©','™','✓','✗','😊','🌸','🔥','💯'];
 let fontsReady=false;
