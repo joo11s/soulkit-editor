@@ -812,7 +812,7 @@ async function autoProcess(origW,origH){
     const geminiRes=await fetch(GEMINI_EDIT_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({base64,mimeType,prompt:'Remove all text from this image.\nThe shapes, outline circles, pointer dots, and connector lines point to specific product features — keep that pointing function recognizable.\nYou may optionally change their visual style and color if it helps make them more eye-catching for a Korean e-commerce shopper — this is up to you, not required.\nKeep the product itself 100% unchanged: same shape, position, angle, lighting, background.\nDo not add any text. Keep the same image size and resolution.'})
+      body:JSON.stringify({base64,mimeType,prompt:'Remove all text from this image. Fill the removed area naturally to match the surrounding background.\nKeep the shapes, outline circles, pointer dots, and connector lines exactly as they are — same position, color, and style.\nKeep the product itself 100% unchanged: same shape, position, angle, lighting, background.\nDo not add any text. Keep the same image size and resolution.'})
     });
     const data=await geminiRes.json();
     if(!data.base64)throw new Error('결과 이미지 없음');
