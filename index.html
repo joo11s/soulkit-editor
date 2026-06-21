@@ -534,6 +534,10 @@ select.pi{cursor:pointer}
       <button class="preset-btn" onclick="miAppendPrompt('Keep the same image size.')">사이즈 그대로</button>
       <button class="preset-btn" onclick="miAppendPrompt('Do not add any text.')">텍스트 추가 금지</button>
       <button class="preset-btn" onclick="miAppendPrompt('4K.')">4K</button>
+      <button class="preset-btn" onclick="miAppendPrompt('Output size 1000x1000px, square ratio.')">1000x1000px</button>
+      <button class="preset-btn" onclick="miAppendPrompt('Output width 860px, keep proportional aspect ratio.')">가로 폭 860px</button>
+      <button class="preset-btn" onclick="miAppendPrompt('16:9 aspect ratio output.')">16:9</button>
+      <button class="preset-btn" onclick="miAppendPrompt('4:3 aspect ratio output.')">4:3</button>
     </div>
     <button class="mi-gen-btn" id="mi-gen-btn" onclick="miGenerate()">✦ 이미지 생성</button>
     <div style="margin-top:8px;font-size:9px;color:#333;line-height:1.8;text-align:center">Gemini Nano Banana 2 (적용완료)</div>
@@ -1713,7 +1717,7 @@ async function miGenerate(){
     if(miSlots.bg){images.push(toImg(miSlots.bg));imageRoleNote+=' Image 2 is a background style reference — strongly and clearly apply its mood, color palette, lighting, and background style (not its content/product) to the new background. Do not just hint at it subtly — make the resulting background visually similar in style to this reference.';}
     if(miSlots.design){images.push(toImg(miSlots.design));imageRoleNote+=` Image ${images.length} is a design style reference — strongly and clearly apply its overall visual design, color scheme, decorative elements, and layout style to the result. Do not just hint at it subtly — the final image's design should closely resemble this reference's style.`;}
     miSetStep(2,'done');
-    const fixedPrompt=`${imageRoleNote}\n\nTask: ${prompt}\n\nRemove all existing text and watermarks. Do not add any new text. Keep the main product exactly as is, only change the background.\nMake it look like professional studio product photography for premium e-commerce advertising — soft realistic lighting, natural shadows and reflections, sharp focus, high detail, photorealistic.\nSquare 1:1 ratio output, 4K.`;
+    const fixedPrompt=`${imageRoleNote}\n\nTask: ${prompt}\n\nRemove all existing text and watermarks. Do not add any new text. Keep the main product exactly as is, only change the background.\nMake it look like professional studio product photography for premium e-commerce advertising — soft realistic lighting, natural shadows and reflections, sharp focus, high detail, photorealistic.\n4K.`;
     miSetStep(3,'run','생성 중...');
     const geminiRes=await fetch(GEMINI_EDIT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({images,prompt:fixedPrompt})});
     const data=await geminiRes.json();
