@@ -809,8 +809,7 @@ async function autoProcess(origW,origH){
   try{
     const base64=origDataUrl.split(',')[1];
     const mimeType=origDataUrl.split(';')[0].split(':')[1];
-    const textList = items.map(it => `"${it.text}"`).join(', ');
-    const removePrompt = `Remove exactly these text elements from the image: ${textList}. Fill each removed area naturally to match the immediately surrounding background.\nKeep the shapes, outline circles, pointer dots, and connector lines exactly as they are — same position, color, and style.\nKeep the product itself 100% unchanged: same shape, position, angle, lighting, background.\nDo not add any text. Keep the same image size and resolution.`;
+    const removePrompt = 'Remove only the Chinese text from this image. Keep everything else exactly the same. Keep the same image size. Do not add any text. 4K.';
     const geminiRes=await fetch(GEMINI_EDIT_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
