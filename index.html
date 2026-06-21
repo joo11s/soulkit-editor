@@ -524,7 +524,7 @@ select.pi{cursor:pointer}
       <button class="preset-btn" data-preset="forest" onclick="miPresetKey('forest',this)">자연/숲</button>
       <button class="preset-btn" data-preset="beach" onclick="miPresetKey('beach',this)">바다</button>
       <button class="preset-btn" data-preset="sky" onclick="miPresetKey('sky',this)">하늘</button>
-      <button class="preset-btn" data-preset="outdoor" onclick="miPresetKey('outdoor',this)">야외</button>
+      <button class="preset-btn" data-preset="camping" onclick="miPresetKey('camping',this)">캠핑</button>
     </div>
     <div class="stitle" style="margin-top:4px">프롬프트</div>
     <textarea class="mi-textarea" id="mi-prompt" placeholder="배경을 어떻게 바꿀지 입력하세요.&#10;예) 주방 배경으로 바꿔줘&#10;예) 흰 배경에 상품만 깔끔하게"></textarea>
@@ -1665,9 +1665,10 @@ const PRESET_VARIANTS={
     'Clear blue sky background with soft white clouds, bright natural daylight',
     'Soft pastel sunset sky background, warm gradient colors, gentle clouds'
   ],
-  outdoor:[
-    'Soft outdoor garden background, blurred greenery, warm natural daylight',
-    'Urban outdoor background, blurred modern architecture, soft daylight'
+  camping:[
+    'Cozy camping background, blurred tent and camping chairs, warm campfire glow at dusk, soft bokeh lights',
+    'Scenic mountain campsite background, blurred tent in a pine forest clearing, soft morning light, misty atmosphere',
+    'Outdoor camping table background, blurred camping gear and lantern, warm golden-hour sunlight'
   ]
 };
 function miPresetKey(key,btnEl){
