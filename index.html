@@ -806,42 +806,21 @@ async function autoProcess(origW,origH){
 
   setStep(3,'run','텍스트 제거 중...');
   showOv('텍스트 제거 중...','Gemini가 배경을 복원하고 있어요 (10~30초)');
-  const removePrompt = 'Remove all text from this image. Fill the removed area naturally to match the surrounding background.\nKeep the shapes, outline circles, pointer dots, and connector lines exactly as they are — same position, color, and style.\nKeep the product itself 100% unchanged: same shape, position, angle, lighting, background.\nDo not add any text. Keep the same image size and resolution.';
-  const checkPrompt = '이 이미지에 읽을 수 있는 텍스트(글자, 단어, 문구)가 남아있는지 확인해줘. JSON만 출력: {"hasText": true 또는 false}';
   try{
     const base64=origDataUrl.split(',')[1];
     const mimeType=origDataUrl.split(';')[0].split(':')[1];
-    let cleanedBase64=null, cleanedMime=null;
-    for(let attempt=1;attempt<=3;attempt++){
-      showOv('텍스트 제거 중...'+(attempt>1?` (재시도 ${attempt}/3)`:''),'Gemini가 배경을 복원하고 있어요 (10~30초)');
-      const geminiRes=await fetch(GEMINI_EDIT_URL,{
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body:JSON.stringify({base64,mimeType,prompt:removePrompt})
-      });
-      const data=await geminiRes.json();
-      if(!data.base64)throw new Error('결과 이미지 없음');
-      cleanedBase64=data.base64; cleanedMime=data.mimeType||'image/png';
-      let stillHasText=false, checkFailed=false;
-      try{
-        const checkRes=await fetch('https://n8n.wonflowai.com/webhook/happybiz-gemini-vision',{
-          method:'POST',headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({base64:cleanedBase64,mimeType:cleanedMime,prompt:checkPrompt})
-        });
-        const checkData=await checkRes.json();
-        const rawCheck=(checkData.text||'').replace(/```json|```/g,'').trim();
-        const hasTextMatch=rawCheck.match(/"hasText"\s*:\s*(true|false)/i);
-        stillHasText = hasTextMatch ? hasTextMatch[1].toLowerCase()==='true' : false;
-      }catch(checkErr){
-        checkFailed=true; // 검사 자체가 실패하면 그냥 이번 결과를 사용 (재시도를 막지 않게)
-      }
-      if(checkFailed || !stillHasText) break;
-      if(attempt===3) throw new Error('3회 시도 후에도 텍스트가 남아있음');
-    }
-    const cleanedUrl=`data:${cleanedMime};base64,${cleanedBase64}`;
+    const textList = items.map(it => `"${it.text}"`).join(', ');
+    const removePrompt = `Remove exactly these text elements from the image: ${textList}. Fill each removed area naturally to match the immediately surrounding background.\nKeep the shapes, outline circles, pointer dots, and connector lines exactly as they are — same position, color, and style.\nKeep the product itself 100% unchanged: same shape, position, angle, lighting, background.\nDo not add any text. Keep the same image size and resolution.`;
+    const geminiRes=await fetch(GEMINI_EDIT_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({base64,mimeType,prompt:removePrompt})
+    });
+    const data=await geminiRes.json();
+    if(!data.base64)throw new Error('결과 이미지 없음');
+    const cleanedUrl=`data:${data.mimeType||'image/png'};base64,${data.base64}`;
     setStep(3,'done');
     fabric.Image.fromURL(cleanedUrl,cleanImg=>{
-      // [FIX 3] 배경 교체도 860px 폭 기준
       const scX=CANVAS_W/cleanImg.width;
       const scY=(CANVAS_W*(cleanImg.height/cleanImg.width))/cleanImg.height;
       cleanImg.set({left:0,top:0,scaleX:scX,scaleY:scY,selectable:false,evented:false});
@@ -853,7 +832,7 @@ async function autoProcess(origW,origH){
     },{crossOrigin:'anonymous'});
   }catch(e){
     setStep(3,'err','제거 실패: '+e.message);
-    toast('텍스트 제거 실패 (번역은 완료됨, 재시도해도 텍스트가 남음)','err');
+    toast('텍스트 제거 실패 (번역은 완료됨)','err');
   }
   hideOv();toast('완료!','ok');setStatus('완료','ok');saveHistory();
 }
