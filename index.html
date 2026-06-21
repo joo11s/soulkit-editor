@@ -461,7 +461,7 @@ select.pi{cursor:pointer}
         </div>
       </div>
       <div class="mi-ov-msg" id="mi-ov-msg">이미지 생성 중...</div>
-      <div class="mi-ov-sub" id="mi-ov-sub">fal.ai Flux Kontext 작업 중<br>잠깐만요! (10~30초)</div>
+      <div class="mi-ov-sub" id="mi-ov-sub">Gemini Nano Banana 작업 중<br>잠깐만요! (10~30초)</div>
     </div>
   </div>
 
@@ -529,7 +529,7 @@ select.pi{cursor:pointer}
     <div class="stitle" style="margin-top:4px">프롬프트</div>
     <textarea class="mi-textarea" id="mi-prompt" placeholder="배경을 어떻게 바꿀지 입력하세요.&#10;예) 주방 배경으로 바꿔줘&#10;예) 흰 배경에 상품만 깔끔하게"></textarea>
     <button class="mi-gen-btn" id="mi-gen-btn" onclick="miGenerate()">✦ 이미지 생성</button>
-    <div style="margin-top:8px;font-size:9px;color:#333;line-height:1.8;text-align:center">fal.ai Flux Kontext<br>나노바나나2 교체 예정</div>
+    <div style="margin-top:8px;font-size:9px;color:#333;line-height:1.8;text-align:center">Gemini Nano Banana 2 (적용완료)</div>
   </div>
 
 </div>
@@ -545,6 +545,7 @@ select.pi{cursor:pointer}
 
 <script>
 const WORKER = 'https://proxy.wonflowai.com';
+const GEMINI_EDIT_URL = 'https://n8n.wonflowai.com/webhook/happybiz-gemini-edit';
 // [FIX 4] 860px 기준 폰트 사이즈 단계 (큰→작은 순)
 const FONT_SIZES = [36, 28, 22, 16, 12];
 // 860px 고정 캔버스 폭
@@ -814,18 +815,18 @@ async function autoProcess(origW,origH){
   updateLayers();updateInfo();setStep(4,'done');cv.requestRenderAll();
 
   setStep(3,'run','텍스트 제거 중...');
-  showOv('텍스트 제거 중...','fal.ai가 배경을 복원하고 있어요 (10~30초)');
+  showOv('텍스트 제거 중...','Gemini가 배경을 복원하고 있어요 (10~30초)');
   try{
-    const imgUrl=await uploadR2(origDataUrl,'image.jpg','image/jpeg');
-    const falRes=await fetch(`${WORKER}/fal-run`,{
+    const base64=origDataUrl.split(',')[1];
+    const mimeType=origDataUrl.split(';')[0].split(':')[1];
+    const geminiRes=await fetch(GEMINI_EDIT_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({model:'fal-ai/image-editing/text-removal',image_url:imgUrl})
+      body:JSON.stringify({base64,mimeType,prompt:'Remove any Chinese text overlays and seller stamps from this image, fill the background naturally. Keep the product itself exactly unchanged, only clean the background.'})
     });
-    const falData=await falRes.json();
-    if(falData.detail||falData.error)throw new Error(JSON.stringify(falData.detail||falData.error));
-    const cleanedUrl=falData.image?.url||falData.images?.[0]?.url;
-    if(!cleanedUrl)throw new Error('결과 URL 없음');
+    const data=await geminiRes.json();
+    if(!data.base64)throw new Error('결과 이미지 없음');
+    const cleanedUrl=`data:${data.mimeType||'image/png'};base64,${data.base64}`;
     setStep(3,'done');
     fabric.Image.fromURL(cleanedUrl,cleanImg=>{
       // [FIX 3] 배경 교체도 860px 폭 기준
@@ -1182,7 +1183,7 @@ const _edLogMessages=[
   {cls:'work',msg:'> 이미지 분석 중...'},
   {cls:'work',msg:'> GPT-4o 호출...'},
   {cls:'ok',  msg:'> 텍스트 감지 완료 ✓'},
-  {cls:'work',msg:'> fal.ai 처리 중...'},
+  {cls:'work',msg:'> Gemini 처리 중...'},
   {cls:'work',msg:'> 배경 복원 중...'},
   {cls:'ok',  msg:'> 처리 완료 ✓'},
 ];
@@ -1638,33 +1639,28 @@ function miPreset(text){
 }
 
 // 이미지 생성
+function toImg(dataUrl){const mimeType=dataUrl.split(';')[0].split(':')[1];const base64=dataUrl.split(',')[1];return {base64,mimeType};}
 async function miGenerate(){
   if(!miSlots.orig){toast('원본 이미지를 먼저 업로드하세요','err');return;}
   const prompt=document.getElementById('mi-prompt').value.trim();
   if(!prompt){toast('프롬프트를 입력하세요','err');return;}
   const btn=document.getElementById('mi-gen-btn');
   btn.disabled=true;
-  miShowOv('이미지 생성 중...','fal.ai Flux Kontext 작업 중\n잠깐만요! (10~30초)');
+  miShowOv('이미지 생성 중...','Gemini가 이미지를 만들고 있어요\n잠깐만요! (10~30초)');
   miSetStep(1,'done');
   try{
-    miSetStep(2,'run','업로드 중...');
-    const origUrl=await uploadR2(miSlots.orig,'mi_orig_'+Date.now()+'.jpg','image/jpeg');
+    miSetStep(2,'run','준비 중...');
+    const images=[toImg(miSlots.orig)];
+    if(miSlots.bg)images.push(toImg(miSlots.bg));
+    if(miSlots.design)images.push(toImg(miSlots.design));
     miSetStep(2,'done');
     const fixedPrompt=prompt+'. Remove all existing text and watermarks. Do not add any new text. Keep the main product exactly as is, only change the background. Square 1:1 ratio output.';
-    const falBody={model:'fal-ai/flux-pro/kontext',image_url:origUrl,prompt:fixedPrompt,guidance_scale:3.5,num_inference_steps:28};
-    if(miSlots.bg||miSlots.design){
-      const refs=[];
-      if(miSlots.bg){const u=await uploadR2(miSlots.bg,'mi_bg_'+Date.now()+'.jpg','image/jpeg');refs.push(u);}
-      if(miSlots.design){const u=await uploadR2(miSlots.design,'mi_ds_'+Date.now()+'.jpg','image/jpeg');refs.push(u);}
-      if(refs.length)falBody.reference_images=refs;
-    }
     miSetStep(3,'run','생성 중...');
-    const falRes=await fetch(WORKER+'/fal-run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(falBody)});
-    const falData=await falRes.json();
-    console.log('[fal response]',JSON.stringify(falData).slice(0,400));
-    if(falData.detail||falData.error)throw new Error(JSON.stringify(falData.detail||falData.error));
-    const resultUrl=falData?.images?.[0]?.url||falData?.image?.url||falData?.output?.images?.[0]?.url||null;
-    if(!resultUrl)throw new Error('결과 URL 없음. 응답: '+JSON.stringify(Object.keys(falData||{})));
+    const geminiRes=await fetch(GEMINI_EDIT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({images,prompt:fixedPrompt})});
+    const data=await geminiRes.json();
+    console.log('[gemini response]',JSON.stringify(data).slice(0,400));
+    if(!data.base64)throw new Error('결과 이미지 없음');
+    const resultUrl=`data:${data.mimeType||'image/png'};base64,${data.base64}`;
     miResultUrl=resultUrl;
     const resultImg=document.getElementById('mi-result-img');
     const placeholder=document.getElementById('mi-placeholder');
