@@ -745,42 +745,28 @@ async function callOpenAI(base64,mime){
 
 텍스트가 없으면 빈 배열 [] 반환.`;
 
-  const res=await fetch('https://n8n.wonflowai.com/webhook/happybiz-openai',{
+  const res=await fetch('https://n8n.wonflowai.com/webhook/happybiz-gemini-vision',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({body:{
-      model:'gpt-4o-mini',
-      max_tokens:4096,
-      messages:[{
-        role:'user',
-        content:[
-          {type:'image_url',image_url:{url:`data:${mime};base64,${base64}`,detail:'high'}},
-          {type:'text',text:prompt}
-        ]
-      }]
-    }})
+    body:JSON.stringify({base64,mimeType:mime,prompt})
   });
   const d=await res.json();
   if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
-  const raw=d.choices?.[0]?.message?.content||'';
+  const raw=d.text||'';
   const match=raw.replace(/```json|```/g,'').trim().match(/\[[\s\S]*\]/);
   if(!match)throw new Error('JSON 배열 없음: '+raw.slice(0,100));
   return JSON.parse(match[0]);
 }
 
 async function callOpenAITr(text){
-  const res=await fetch('https://n8n.wonflowai.com/webhook/happybiz-openai',{
+  const res=await fetch('https://n8n.wonflowai.com/webhook/happybiz-gemini-vision',{
     method:'POST',
     headers:{'Content-Type':'application/json'},
-    body:JSON.stringify({body:{
-      model:'gpt-4o-mini',
-      max_tokens:300,
-      messages:[{role:'user',content:`다음을 자연스러운 한국어로 번역해. 번역 결과만 출력해.\n\n${text}`}]
-    }})
+    body:JSON.stringify({prompt:`다음을 자연스러운 한국어로 번역해. 번역 결과만 출력해.\n\n${text}`})
   });
   const d=await res.json();
   if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
-  return d.choices?.[0]?.message?.content?.trim()||text;
+  return (d.text||text).trim();
 }
 
 async function autoProcess(origW,origH){
