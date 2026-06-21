@@ -513,18 +513,18 @@ select.pi{cursor:pointer}
   <div class="mi-prompt-panel">
     <div class="stitle">배경 프리셋</div>
     <div class="preset-grid">
-      <button class="preset-btn" onclick="miPreset('Pure white clean studio background, product photography')">흰 배경</button>
-      <button class="preset-btn" onclick="miPreset('Light gray minimal background, soft gradient')">그레이</button>
-      <button class="preset-btn" onclick="miPreset('Dark black background, dramatic lighting')">블랙</button>
-      <button class="preset-btn" onclick="miPreset('Modern kitchen interior background, natural scale')">주방</button>
-      <button class="preset-btn" onclick="miPreset('Elegant living room interior background')">거실</button>
-      <button class="preset-btn" onclick="miPreset('Cozy bedroom background')">침실</button>
-      <button class="preset-btn" onclick="miPreset('Clean bathroom background')">욕실</button>
-      <button class="preset-btn" onclick="miPreset('Aesthetic cafe background with warm lighting')">카페</button>
-      <button class="preset-btn" onclick="miPreset('Fresh green forest nature background')">자연/숲</button>
-      <button class="preset-btn" onclick="miPreset('Clear ocean beach background')">바다</button>
-      <button class="preset-btn" onclick="miPreset('Clear blue sky background')">하늘</button>
-      <button class="preset-btn" onclick="miPreset('Outdoor natural background')">야외</button>
+      <button class="preset-btn" data-preset="white" onclick="miPresetKey('white',this)">흰 배경</button>
+      <button class="preset-btn" data-preset="gray" onclick="miPresetKey('gray',this)">그레이</button>
+      <button class="preset-btn" data-preset="black" onclick="miPresetKey('black',this)">블랙</button>
+      <button class="preset-btn" data-preset="kitchen" onclick="miPresetKey('kitchen',this)">주방</button>
+      <button class="preset-btn" data-preset="livingroom" onclick="miPresetKey('livingroom',this)">거실</button>
+      <button class="preset-btn" data-preset="bedroom" onclick="miPresetKey('bedroom',this)">침실</button>
+      <button class="preset-btn" data-preset="bathroom" onclick="miPresetKey('bathroom',this)">욕실</button>
+      <button class="preset-btn" data-preset="cafe" onclick="miPresetKey('cafe',this)">카페</button>
+      <button class="preset-btn" data-preset="forest" onclick="miPresetKey('forest',this)">자연/숲</button>
+      <button class="preset-btn" data-preset="beach" onclick="miPresetKey('beach',this)">바다</button>
+      <button class="preset-btn" data-preset="sky" onclick="miPresetKey('sky',this)">하늘</button>
+      <button class="preset-btn" data-preset="outdoor" onclick="miPresetKey('outdoor',this)">야외</button>
     </div>
     <div class="stitle" style="margin-top:4px">프롬프트</div>
     <textarea class="mi-textarea" id="mi-prompt" placeholder="배경을 어떻게 바꿀지 입력하세요.&#10;예) 주방 배경으로 바꿔줘&#10;예) 흰 배경에 상품만 깔끔하게"></textarea>
@@ -1620,6 +1620,57 @@ function miSlotClear(key){miSlots[key]=null;const preview=document.getElementByI
 function miSlotDrop(event,key){const file=event.dataTransfer.files[0];if(!file||!file.type.startsWith('image/'))return;const reader=new FileReader();reader.onload=e=>{miSlots[key]=e.target.result;const preview=document.getElementById('slot-'+key+'-preview');const img=document.getElementById('slot-'+key+'-img');if(preview&&img){img.src=e.target.result;preview.style.display='block';document.getElementById('slot-'+key).classList.add('filled');}};reader.readAsDataURL(file);}
 
 // 프리셋
+const PRESET_VARIANTS={
+  white:['Pure white clean studio background, product photography, soft shadow'],
+  gray:['Light gray minimal background, soft gradient, subtle shadow'],
+  black:['Dark black background, dramatic rim lighting'],
+  kitchen:[
+    'Modern minimalist kitchen interior background, white marble countertop, soft morning daylight from a window, gently blurred cabinets in the background, shallow depth of field',
+    'Cozy Scandinavian-style kitchen background, light wood countertop, warm golden-hour sunlight, blurred pastel cabinets, homey atmosphere',
+    'Sleek dark kitchen interior background, matte black countertop, dramatic side lighting, blurred modern cabinetry, moody high-end feel',
+    'Bright airy kitchen background, light blue tiled backsplash, soft diffused daylight, blurred potted herbs in the background'
+  ],
+  livingroom:[
+    'Elegant modern living room background, beige linen sofa softly blurred, warm afternoon light through sheer curtains',
+    'Minimalist Scandinavian living room background, light wood floor, soft natural window light, blurred green plants',
+    'Cozy living room background with a warm fireplace glow, soft blurred bookshelf in the distance'
+  ],
+  bedroom:[
+    'Soft cozy bedroom background, white linen bedding blurred in the distance, warm morning sunlight through curtains',
+    'Minimalist bedroom background, pastel wall, soft diffused daylight, blurred nightstand and lamp'
+  ],
+  bathroom:[
+    'Clean modern bathroom background, white marble tiles, soft natural light, blurred bath towels',
+    'Spa-like bathroom background, light stone tiles, soft warm ambient lighting, blurred greenery'
+  ],
+  cafe:[
+    'Aesthetic cafe background, warm wooden table softly blurred, golden afternoon light through cafe windows, blurred bokeh lights',
+    'Minimalist cafe background, marble counter, soft warm pendant lighting, blurred coffee cups in distance'
+  ],
+  forest:[
+    'Fresh green forest background, soft dappled sunlight through leaves, blurred bokeh foliage',
+    'Misty pine forest background, soft cool morning light, blurred tree trunks'
+  ],
+  beach:[
+    'Clear turquoise ocean beach background, soft golden sunset light, blurred waves and sand',
+    'Bright tropical beach background, soft midday light, blurred palm leaves at the edge'
+  ],
+  sky:[
+    'Clear blue sky background with soft white clouds, bright natural daylight',
+    'Soft pastel sunset sky background, warm gradient colors, gentle clouds'
+  ],
+  outdoor:[
+    'Soft outdoor garden background, blurred greenery, warm natural daylight',
+    'Urban outdoor background, blurred modern architecture, soft daylight'
+  ]
+};
+function miPresetKey(key,btnEl){
+  const arr=PRESET_VARIANTS[key]||[];
+  const text=arr[Math.floor(Math.random()*arr.length)]||key;
+  document.getElementById('mi-prompt').value=text;
+  document.querySelectorAll('.preset-btn').forEach(b=>b.classList.toggle('on',b===btnEl));
+}
+
 function miPreset(text){
   const ta=document.getElementById('mi-prompt');ta.value=text;
   document.querySelectorAll('.preset-btn').forEach(b=>b.classList.toggle('on',b.getAttribute('onclick').includes(text.replace(/'/g,"\'"))));
