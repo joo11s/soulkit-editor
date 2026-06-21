@@ -199,10 +199,6 @@ select.pi{cursor:pointer}
         <input type="file" accept="image/*" onchange="loadImg(this)">
         <div class="uptext"><strong>클릭 또는 드래그</strong>업로드 즉시 자동 번역</div>
       </label>
-      <label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#999;margin:8px 0;cursor:pointer">
-        <input type="checkbox" id="geminiTextBakeToggle" style="cursor:pointer">
-        Gemini가 한국어 텍스트 직접 렌더링 (실험)
-      </label>
     </div>
     <div class="sec">
       <div class="stitle">도구</div>
@@ -799,34 +795,24 @@ async function autoProcess(origW,origH){
   if(!items||!items.length){
     setStep(4,'done');hideOv();toast('감지된 텍스트 없음','ok');setStatus('완료','ok');return;
   }
-  const bakeMode = document.getElementById('geminiTextBakeToggle')?.checked;
-
-  if(!bakeMode){
-    setStep(4,'run','번역 삽입 중...');
-    objs.forEach(o=>cv.remove(o));objs=[];
-    if(!fontsReady){await document.fonts.ready;fontsReady=true;}
-    items.forEach(item=>{
-      const txt=makeTextLayer(item,item.translated||item.text,true);
-      cv.bringToFront(txt);
-    });
-    updateLayers();updateInfo();setStep(4,'done');cv.requestRenderAll();
-  } else {
-    setStep(4,'done'); // 베이크 모드에서는 이미지에 직접 그려지므로 캔버스 레이어 생성 스킵
-  }
+  setStep(4,'run','번역 삽입 중...');
+  objs.forEach(o=>cv.remove(o));objs=[];
+  if(!fontsReady){await document.fonts.ready;fontsReady=true;}
+  items.forEach(item=>{
+    const txt=makeTextLayer(item,item.translated||item.text,true);
+    cv.bringToFront(txt);
+  });
+  updateLayers();updateInfo();setStep(4,'done');cv.requestRenderAll();
 
   setStep(3,'run','텍스트 제거 중...');
   showOv('텍스트 제거 중...','Gemini가 배경을 복원하고 있어요 (10~30초)');
   try{
     const base64=origDataUrl.split(',')[1];
     const mimeType=origDataUrl.split(';')[0].split(':')[1];
-    const textList = items.map(it => `- (${it.role||'text'}) "${it.translated||it.text}"`).join('\n');
-    const prompt = bakeMode
-      ? `Replace all existing text in this image with the following Korean text, placed in roughly the same regions as the original text it replaces:\n${textList}\n\nDesign the text to look bold, clear, and visually impactful — choose font size, weight, and color that suit the image and grab attention, like a professional Korean e-commerce product page. Headline text should be the most prominent; label text should be clean and readable.\n\nKeep the shapes, outline circles, pointer dots, and connector lines exactly as they are — same position, color, and style.\nKeep the product itself 100% unchanged: same shape, position, angle, lighting, background.\nKeep the same image size and resolution. Do not add any text other than the Korean text listed above.`
-      : 'Remove all text from this image. Fill the removed area naturally to match the surrounding background.\nKeep the shapes, outline circles, pointer dots, and connector lines exactly as they are — same position, color, and style.\nKeep the product itself 100% unchanged: same shape, position, angle, lighting, background.\nDo not add any text. Keep the same image size and resolution.';
     const geminiRes=await fetch(GEMINI_EDIT_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({base64,mimeType,prompt})
+      body:JSON.stringify({base64,mimeType,prompt:'Remove all text from this image. Fill the removed area naturally to match the surrounding background.\nKeep the shapes, outline circles, pointer dots, and connector lines exactly as they are — same position, color, and style.\nKeep the product itself 100% unchanged: same shape, position, angle, lighting, background.\nDo not add any text. Keep the same image size and resolution.'})
     });
     const data=await geminiRes.json();
     if(!data.base64)throw new Error('결과 이미지 없음');
