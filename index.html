@@ -1672,6 +1672,11 @@ const PRESET_VARIANTS={
   ]
 };
 function miPresetKey(key,btnEl){
+  if(btnEl.classList.contains('on')){
+    // 같은 프리셋 다시 클릭하면 선택 해제만 (텍스트는 그대로 둠 - 사용자가 수정했을 수 있으니)
+    btnEl.classList.remove('on');
+    return;
+  }
   const arr=PRESET_VARIANTS[key]||[];
   const text=arr[Math.floor(Math.random()*arr.length)]||key;
   document.getElementById('mi-prompt').value=text;
