@@ -125,6 +125,7 @@ select.pi{cursor:pointer}
 .pix-label{font-size:8px;color:#555;font-family:'Space Mono',monospace;letter-spacing:1px}
 .pix-log{background:#0d0d1a;border:1px solid #1a1a2e;border-radius:4px;padding:6px 10px;min-width:160px;max-width:200px;height:52px;overflow:hidden;display:flex;flex-direction:column;justify-content:flex-end;gap:2px}
 .pix-log-line{font-size:9px;font-family:'Space Mono',monospace;animation:logFadeIn .3s ease}
+#pix-log-ed .pix-log-line{font-size:13px}
 .pix-log-line.work{color:#7fdbca}
 .pix-log-line.ok{color:#4ecb71}
 @keyframes logFadeIn{from{opacity:0;transform:translateY(3px)}to{opacity:1;transform:translateY(0)}}
@@ -243,10 +244,10 @@ select.pi{cursor:pointer}
       <div class="ov" id="ov">
         <div class="pix-office">
           <div class="pix-char-wrap">
-            <canvas id="pixel-canvas-ed" width="64" height="64" style="image-rendering:pixelated;width:48px;height:48px"></canvas>
-            <div class="pix-label">AI AGENT</div>
+            <canvas id="pixel-canvas-ed" width="64" height="64" style="image-rendering:pixelated;width:80px;height:80px"></canvas>
+            <div class="pix-label" style="font-size:11px">AI AGENT</div>
           </div>
-          <div class="pix-log" id="pix-log-ed">
+          <div class="pix-log" id="pix-log-ed" style="min-width:240px;max-width:300px;height:72px">
             <div class="pix-log-line work">&gt; 초기화 중...<span class="pix-cursor">▊</span></div>
           </div>
         </div>
@@ -1174,7 +1175,7 @@ function hideOv(){
 let _edPixelTimer=null, _edPixelFrame=0, _edLogTimer=null, _edLogIdx=0;
 const _edLogMessages=[
   {cls:'work',msg:'> 이미지 분석 중...'},
-  {cls:'work',msg:'> GPT-4o 호출...'},
+  {cls:'work',msg:'> Gemini Vision 호출...'},
   {cls:'ok',  msg:'> 텍스트 감지 완료 ✓'},
   {cls:'work',msg:'> Gemini 처리 중...'},
   {cls:'work',msg:'> 배경 복원 중...'},
@@ -1312,7 +1313,7 @@ let _pixelFrame=0;
 const _logMessages=[
   {cls:'work',msg:'> 이미지 분석 중...'},
   {cls:'work',msg:'> 프롬프트 최적화...'},
-  {cls:'work',msg:'> Flux API 호출...'},
+  {cls:'work',msg:'> Gemini API 호출...'},
   {cls:'ok',  msg:'> 모델 로딩 완료 ✓'},
   {cls:'work',msg:'> 픽셀 렌더링 중...'},
   {cls:'work',msg:'> 배경 합성 중...'},
