@@ -528,6 +528,12 @@ select.pi{cursor:pointer}
     </div>
     <div class="stitle" style="margin-top:4px">프롬프트</div>
     <textarea class="mi-textarea" id="mi-prompt" placeholder="배경을 어떻게 바꿀지 입력하세요.&#10;예) 주방 배경으로 바꿔줘&#10;예) 흰 배경에 상품만 깔끔하게"></textarea>
+    <div class="preset-grid" style="margin-top:6px">
+      <button class="preset-btn" onclick="miAppendPrompt('Keep everything else exactly the same.')">나머지는 그대로</button>
+      <button class="preset-btn" onclick="miAppendPrompt('Keep the same image size.')">사이즈 그대로</button>
+      <button class="preset-btn" onclick="miAppendPrompt('Do not add any text.')">텍스트 추가 금지</button>
+      <button class="preset-btn" onclick="miAppendPrompt('4K.')">4K</button>
+    </div>
     <button class="mi-gen-btn" id="mi-gen-btn" onclick="miGenerate()">✦ 이미지 생성</button>
     <div style="margin-top:8px;font-size:9px;color:#333;line-height:1.8;text-align:center">Gemini Nano Banana 2 (적용완료)</div>
   </div>
@@ -1669,6 +1675,13 @@ function miPresetKey(key,btnEl){
   const text=arr[Math.floor(Math.random()*arr.length)]||key;
   document.getElementById('mi-prompt').value=text;
   document.querySelectorAll('.preset-btn').forEach(b=>b.classList.toggle('on',b===btnEl));
+}
+
+function miAppendPrompt(phrase){
+  const ta=document.getElementById('mi-prompt');
+  const cur=ta.value.trim();
+  ta.value = cur ? (cur+' '+phrase) : phrase;
+  ta.focus();
 }
 
 function miPreset(text){
