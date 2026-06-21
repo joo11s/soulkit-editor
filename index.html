@@ -808,7 +808,7 @@ async function autoProcess(origW,origH){
     setStep(3,'done');
     fabric.Image.fromURL(cleanedUrl,cleanImg=>{
       const scX=CANVAS_W/cleanImg.width;
-      const scY=(CANVAS_W*(cleanImg.height/cleanImg.width))/cleanImg.height;
+      const scY=cv.getHeight()/cleanImg.height;
       cleanImg.set({left:0,top:0,scaleX:scX,scaleY:scY,selectable:false,evented:false});
       const bg=cv.getObjects().find(o=>!o.selectable);
       if(bg)cv.remove(bg);
