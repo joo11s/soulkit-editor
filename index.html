@@ -807,7 +807,7 @@ async function autoProcess(origW,origH){
   try{
     const base64=origDataUrl.split(',')[1];
     const mimeType=origDataUrl.split(';')[0].split(':')[1];
-    const removePrompt = 'Remove only the Chinese text from this image. Keep everything else exactly the same. Keep the same image size. Do not add any text. 4K.';
+    const removePrompt = 'Remove only the Chinese text from this image. Keep the shapes, outline circles, pointer dots, and connector lines exactly as they are. Keep everything else exactly the same. Keep the same image size. Do not add any text. 4K.';
     const geminiRes=await fetch(GEMINI_EDIT_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
