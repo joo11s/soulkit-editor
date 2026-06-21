@@ -859,7 +859,7 @@ function makeTextLayer(item,displayText,translated){
   const top=(item.top/100)*H;
   const width=(item.width/100)*W;
   // [FIX 4] height% 기반 단계별 폰트 사이즈
-  const fs=classifyFontSize(item);
+  let fs=classifyFontSize(item);
   let tc='#111111';
   if(item.text_color&&/^#[0-9a-fA-F]{3,6}$/.test(item.text_color)){
     tc=item.text_color;
@@ -875,6 +875,16 @@ function makeTextLayer(item,displayText,translated){
     borderColor:'#ff6b35',cornerColor:'#ff6b35',cornerSize:7,
     transparentCorners:false,padding:3,
   });
+  // headline/label은 원본이 보통 1줄 배지 형태라, 번역 후 2줄 이상으로 줄바꿈되면 보기 어색해짐 -> 1줄에 맞을 때까지 폰트 축소
+  if(item.role==='headline'||item.role==='label'){
+    let guard=0;
+    while(txt._textLines && txt._textLines.length>1 && fs>10 && guard<40){
+      fs-=1;
+      txt.set('fontSize',fs);
+      txt._initDimensions();
+      guard++;
+    }
+  }
   txt._meta={original:item.text,translated,type:'text'};
   cv.add(txt);objs.push(txt);return txt;
 }
