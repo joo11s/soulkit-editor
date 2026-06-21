@@ -1709,8 +1709,8 @@ async function miGenerate(){
     miSetStep(2,'run','준비 중...');
     const images=[toImg(miSlots.orig)];
     let imageRoleNote='Image 1 is the main product photo — this exact product must remain unchanged in shape, color, and detail.';
-    if(miSlots.bg){images.push(toImg(miSlots.bg));imageRoleNote+=' Image 2 is a background style reference — use its mood, color palette, and background style (not its content/product) as inspiration for the new background.';}
-    if(miSlots.design){images.push(toImg(miSlots.design));imageRoleNote+=` Image ${images.length} is a design style reference — use its overall visual design and layout style as inspiration.`;}
+    if(miSlots.bg){images.push(toImg(miSlots.bg));imageRoleNote+=' Image 2 is a background style reference — strongly and clearly apply its mood, color palette, lighting, and background style (not its content/product) to the new background. Do not just hint at it subtly — make the resulting background visually similar in style to this reference.';}
+    if(miSlots.design){images.push(toImg(miSlots.design));imageRoleNote+=` Image ${images.length} is a design style reference — strongly and clearly apply its overall visual design, color scheme, decorative elements, and layout style to the result. Do not just hint at it subtly — the final image's design should closely resemble this reference's style.`;}
     miSetStep(2,'done');
     const fixedPrompt=`${imageRoleNote}\n\nTask: ${prompt}\n\nRemove all existing text and watermarks. Do not add any new text. Keep the main product exactly as is, only change the background.\nMake it look like professional studio product photography for premium e-commerce advertising — soft realistic lighting, natural shadows and reflections, sharp focus, high detail, photorealistic.\nSquare 1:1 ratio output, 4K.`;
     miSetStep(3,'run','생성 중...');
