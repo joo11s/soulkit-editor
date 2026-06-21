@@ -822,6 +822,7 @@ async function autoProcess(origW,origH){
       const data=await geminiRes.json();
       if(!data.base64)throw new Error('결과 이미지 없음');
       cleanedBase64=data.base64; cleanedMime=data.mimeType||'image/png';
+      let stillHasText=false, checkFailed=false;
       try{
         const checkRes=await fetch('https://n8n.wonflowai.com/webhook/happybiz-gemini-vision',{
           method:'POST',headers:{'Content-Type':'application/json'},
@@ -830,12 +831,12 @@ async function autoProcess(origW,origH){
         const checkData=await checkRes.json();
         const rawCheck=(checkData.text||'').replace(/```json|```/g,'').trim();
         const hasTextMatch=rawCheck.match(/"hasText"\s*:\s*(true|false)/i);
-        const stillHasText = hasTextMatch ? hasTextMatch[1].toLowerCase()==='true' : false;
-        if(!stillHasText) break;
-        if(attempt===3) throw new Error('3회 시도 후에도 텍스트가 남아있음');
+        stillHasText = hasTextMatch ? hasTextMatch[1].toLowerCase()==='true' : false;
       }catch(checkErr){
-        break; // 검사 자체가 실패하면 그냥 결과 사용 (검사 실패가 재시도를 막지 않게)
+        checkFailed=true; // 검사 자체가 실패하면 그냥 이번 결과를 사용 (재시도를 막지 않게)
       }
+      if(checkFailed || !stillHasText) break;
+      if(attempt===3) throw new Error('3회 시도 후에도 텍스트가 남아있음');
     }
     const cleanedUrl=`data:${cleanedMime};base64,${cleanedBase64}`;
     setStep(3,'done');
