@@ -171,6 +171,15 @@ select.pi{cursor:pointer}
 /* ===== 크롭 모달 ===== */
 .mi-crop-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9500;flex-direction:column;align-items:center;justify-content:center}
 .mi-crop-modal.show{display:flex}
+/* ===== 메인추가이미지 크롭 도구 ===== */
+.mi-extra-crop-wrap{display:none;width:100%;flex-direction:column;align-items:center;padding:16px 0;gap:10px}
+.mi-extra-crop-wrap.show{display:flex}
+.mi-extra-crop-stage{position:relative;overflow:hidden;background:#060606;border-radius:6px;cursor:grab;user-select:none;flex-shrink:0}
+.mi-extra-crop-stage:active{cursor:grabbing}
+.mi-extra-crop-img{position:absolute;top:0;left:0;transform-origin:0 0;pointer-events:none;image-rendering:auto}
+.mi-extra-crop-overlay-top,.mi-extra-crop-overlay-bottom,.mi-extra-crop-overlay-left,.mi-extra-crop-overlay-right{position:absolute;background:rgba(0,0,0,.55);pointer-events:none;z-index:2}
+.mi-extra-crop-frame{position:absolute;border:2px solid #f5e6c8;box-sizing:border-box;pointer-events:none;z-index:3;box-shadow:0 0 0 9999px rgba(0,0,0,.55)}
+.mi-extra-crop-label{font-size:9px;color:#f5e6c860;letter-spacing:1px;text-transform:uppercase;text-align:center}
 .mi-crop-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;justify-content:center}
 .mi-crop-container{position:relative;display:inline-block;line-height:0;max-width:90vw;max-height:70vh;overflow:hidden}
 .mi-crop-container img{display:block;max-width:90vw;max-height:70vh;pointer-events:none}
@@ -469,6 +478,16 @@ select.pi{cursor:pointer}
       <span class="mi-slot-ico">🎨</span>
       <span class="mi-slot-label">디자인 참고<br><span style="color:#444">선택</span></span>
     </label>
+    <div style="height:1px;background:#1a1a1a;margin:2px 0"></div>
+    <label class="mi-slot" id="slot-extra" ondragover="event.preventDefault()" ondrop="event.preventDefault();miExtraSlotDrop(event)" style="border-color:#2a2a4a">
+      <input type="file" accept="image/*" onchange="miExtraSlotLoad(this)">
+      <div id="slot-extra-preview" style="display:none;width:100%;height:100%;position:absolute;inset:0">
+        <img id="slot-extra-img" style="width:100%;height:100%;object-fit:contain">
+        <button class="mi-slot-clear" onclick="event.stopPropagation();miExtraSlotClear()">×</button>
+      </div>
+      <span class="mi-slot-ico" style="color:#a78bfa">✂</span>
+      <span class="mi-slot-label" style="color:#a78bfa60">메인추가<br><span style="color:#3d2d6e">크롭 도구</span></span>
+    </label>
   </div>
 
   <!-- 열3: 생성결과 (정중앙) -->
@@ -493,6 +512,15 @@ select.pi{cursor:pointer}
       </div>
       <div style="font-size:9px;color:#333;text-align:center;margin-top:4px" id="mi-mode-label">모드: 원본</div>
     </div>
+    <!-- 메인추가이미지 크롭 UI -->
+    <div class="mi-extra-crop-wrap" id="mi-extra-crop-wrap">
+      <div class="mi-extra-crop-label">메인추가 크롭 — 이미지를 드래그하여 위치 조정, 휠로 확대/축소</div>
+      <div class="mi-extra-crop-stage" id="mi-extra-crop-stage">
+        <img class="mi-extra-crop-img" id="mi-extra-crop-img-el" src="" alt="">
+        <div class="mi-extra-crop-frame" id="mi-extra-crop-frame"></div>
+      </div>
+    </div>
+
     <div class="mi-overlay" id="mi-overlay">
       <div class="pix-office">
         <div class="pix-char-wrap">
@@ -510,6 +538,19 @@ select.pi{cursor:pointer}
 
   <!-- 열4: 속성패널 -->
   <div class="mi-props">
+    <!-- 메인추가 크롭 컨트롤 패널 -->
+    <div class="sec" id="mi-extra-props" style="display:none;border-bottom:1px solid #2a2a4a">
+      <div class="stitle" style="color:#a78bfa">메인추가 크롭</div>
+      <div class="pr">
+        <label class="pl">출력 가로 (px)</label>
+        <input type="number" class="pi" id="mi-extra-w" value="800" min="50" max="9999" oninput="miExtraUpdateFrame()">
+      </div>
+      <div class="pr">
+        <label class="pl">출력 세로 (px)</label>
+        <input type="number" class="pi" id="mi-extra-h" value="800" min="50" max="9999" oninput="miExtraUpdateFrame()">
+      </div>
+      <button class="mi-gen-btn" onclick="miExtraSave()" style="background:#a78bfa;color:#0f0f0f;margin-top:4px">✂ 저장 (PNG 다운로드)</button>
+    </div>
     <div class="sec">
       <div class="stitle">속성</div>
       <div id="mi-ns" class="ns">요소를 선택하세요</div>
@@ -1970,6 +2011,7 @@ function miDownload(){
 // 초기화
 function miClearAll(){
   ['orig','bg','design'].forEach(k=>miSlotClear(k));
+  miExtraSlotClear();
   const wrap=document.getElementById('mi-result-wrap');
   const placeholder=document.getElementById('mi-placeholder');
   const gridWrap=document.getElementById('mi-grid-wrap');
@@ -2170,6 +2212,243 @@ function miApplyCrop(){
   };
   tmpImg.onerror=()=>{toast('크롭 처리 오류','err');miCloseCrop();};
   tmpImg.src=miResultUrl;
+}
+
+/* ===== 메인추가이미지 크롭 도구 (slot-extra) ===== */
+// miSlots.extra 는 기존 miSlots 객체 확장으로 관리
+miSlots.extra=null;
+
+// 내부 상태
+let _extraImgEl=null;      // 실제 Image 객체 (naturalWidth/Height)
+let _extraImgX=0;          // 캔버스 내 이미지 오프셋 X (px)
+let _extraImgY=0;          // 캔버스 내 이미지 오프셋 Y (px)
+let _extraScale=1;         // 이미지 스케일 배율
+let _extraDragging=false;
+let _extraDragStartX=0, _extraDragStartY=0;
+let _extraDragImgX=0, _extraDragImgY=0;
+
+// 스테이지 표시 크기 (CSS px)
+const EXTRA_STAGE_W=480;
+const EXTRA_STAGE_H=360;
+
+function miExtraSlotLoad(inp){
+  const file=inp.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    miSlots.extra=e.target.result;
+    const preview=document.getElementById('slot-extra-preview');
+    const img=document.getElementById('slot-extra-img');
+    if(preview&&img){img.src=e.target.result;preview.style.display='block';document.getElementById('slot-extra').classList.add('filled');}
+    miExtraInitCrop(e.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+function miExtraSlotDrop(event){
+  const file=event.dataTransfer.files[0];
+  if(!file||!file.type.startsWith('image/'))return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    miSlots.extra=e.target.result;
+    const preview=document.getElementById('slot-extra-preview');
+    const img=document.getElementById('slot-extra-img');
+    if(preview&&img){img.src=e.target.result;preview.style.display='block';document.getElementById('slot-extra').classList.add('filled');}
+    miExtraInitCrop(e.target.result);
+  };
+  reader.readAsDataURL(file);
+}
+
+function miExtraSlotClear(){
+  miSlots.extra=null;
+  const preview=document.getElementById('slot-extra-preview');
+  if(preview)preview.style.display='none';
+  document.getElementById('slot-extra').classList.remove('filled');
+  const inp=document.querySelector('#slot-extra input');
+  if(inp)inp.value='';
+  // hide crop UI
+  document.getElementById('mi-extra-crop-wrap').classList.remove('show');
+  document.getElementById('mi-extra-props').style.display='none';
+  _extraImgEl=null;
+}
+
+function miExtraInitCrop(dataUrl){
+  const img=new Image();
+  img.onload=()=>{
+    _extraImgEl=img;
+    // fit image into stage initially (contain)
+    const scaleW=EXTRA_STAGE_W/img.naturalWidth;
+    const scaleH=EXTRA_STAGE_H/img.naturalHeight;
+    _extraScale=Math.min(scaleW,scaleH);
+    // center image in stage
+    _extraImgX=(EXTRA_STAGE_W-img.naturalWidth*_extraScale)/2;
+    _extraImgY=(EXTRA_STAGE_H-img.naturalHeight*_extraScale)/2;
+
+    // setup stage size
+    const stage=document.getElementById('mi-extra-crop-stage');
+    stage.style.width=EXTRA_STAGE_W+'px';
+    stage.style.height=EXTRA_STAGE_H+'px';
+
+    // setup img element
+    const imgEl=document.getElementById('mi-extra-crop-img-el');
+    imgEl.src=dataUrl;
+    imgEl.style.width=Math.round(img.naturalWidth*_extraScale)+'px';
+    imgEl.style.height=Math.round(img.naturalHeight*_extraScale)+'px';
+    imgEl.style.left=Math.round(_extraImgX)+'px';
+    imgEl.style.top=Math.round(_extraImgY)+'px';
+
+    // render frame
+    miExtraUpdateFrame();
+
+    // show UI
+    document.getElementById('mi-extra-crop-wrap').classList.add('show');
+    document.getElementById('mi-extra-props').style.display='block';
+
+    // bind events (once)
+    miExtraBindEvents();
+
+    toast('메인추가 이미지 로드됨 — 드래그로 위치 조정, 휠로 확대/축소','ok');
+  };
+  img.src=dataUrl;
+}
+
+function miExtraUpdateFrame(){
+  if(!_extraImgEl)return;
+  const outW=parseInt(document.getElementById('mi-extra-w').value)||800;
+  const outH=parseInt(document.getElementById('mi-extra-h').value)||800;
+  const ratio=outW/outH;
+
+  // frame fills width or height of stage while matching ratio
+  let fW, fH;
+  if(ratio>=EXTRA_STAGE_W/EXTRA_STAGE_H){
+    fW=Math.round(EXTRA_STAGE_W*0.88);
+    fH=Math.round(fW/ratio);
+  } else {
+    fH=Math.round(EXTRA_STAGE_H*0.88);
+    fW=Math.round(fH*ratio);
+  }
+  const fX=Math.round((EXTRA_STAGE_W-fW)/2);
+  const fY=Math.round((EXTRA_STAGE_H-fH)/2);
+
+  const frame=document.getElementById('mi-extra-crop-frame');
+  frame.style.left=fX+'px';
+  frame.style.top=fY+'px';
+  frame.style.width=fW+'px';
+  frame.style.height=fH+'px';
+}
+
+let _extraEventsbound=false;
+function miExtraBindEvents(){
+  if(_extraEventsbound)return;
+  _extraEventsbound=true;
+  const stage=document.getElementById('mi-extra-crop-stage');
+
+  stage.addEventListener('mousedown',e=>{
+    if(!_extraImgEl)return;
+    e.preventDefault();
+    _extraDragging=true;
+    _extraDragStartX=e.clientX;
+    _extraDragStartY=e.clientY;
+    _extraDragImgX=_extraImgX;
+    _extraDragImgY=_extraImgY;
+  });
+
+  document.addEventListener('mousemove',e=>{
+    if(!_extraDragging)return;
+    const dx=e.clientX-_extraDragStartX;
+    const dy=e.clientY-_extraDragStartY;
+    _extraImgX=_extraDragImgX+dx;
+    _extraImgY=_extraDragImgY+dy;
+    miExtraApplyTransform();
+  });
+
+  document.addEventListener('mouseup',()=>{_extraDragging=false;});
+
+  // touch drag
+  stage.addEventListener('touchstart',e=>{
+    if(!_extraImgEl||e.touches.length!==1)return;
+    e.preventDefault();
+    const t=e.touches[0];
+    _extraDragging=true;
+    _extraDragStartX=t.clientX;
+    _extraDragStartY=t.clientY;
+    _extraDragImgX=_extraImgX;
+    _extraDragImgY=_extraImgY;
+  },{passive:false});
+
+  document.addEventListener('touchmove',e=>{
+    if(!_extraDragging||e.touches.length!==1)return;
+    e.preventDefault();
+    const t=e.touches[0];
+    const dx=t.clientX-_extraDragStartX;
+    const dy=t.clientY-_extraDragStartY;
+    _extraImgX=_extraDragImgX+dx;
+    _extraImgY=_extraDragImgY+dy;
+    miExtraApplyTransform();
+  },{passive:false});
+
+  document.addEventListener('touchend',()=>{_extraDragging=false;});
+
+  // wheel zoom (centered on stage center)
+  stage.addEventListener('wheel',e=>{
+    if(!_extraImgEl)return;
+    e.preventDefault();
+    const rect=stage.getBoundingClientRect();
+    const pivotX=e.clientX-rect.left;
+    const pivotY=e.clientY-rect.top;
+    const factor=e.deltaY<0?1.1:0.9;
+    const newScale=Math.max(0.05,Math.min(20,_extraScale*factor));
+    // adjust offset so the pivot point stays fixed
+    _extraImgX=pivotX+((_extraImgX-pivotX)*(newScale/_extraScale));
+    _extraImgY=pivotY+((_extraImgY-pivotY)*(newScale/_extraScale));
+    _extraScale=newScale;
+    miExtraApplyTransform();
+  },{passive:false});
+}
+
+function miExtraApplyTransform(){
+  if(!_extraImgEl)return;
+  const imgEl=document.getElementById('mi-extra-crop-img-el');
+  const scaledW=Math.round(_extraImgEl.naturalWidth*_extraScale);
+  const scaledH=Math.round(_extraImgEl.naturalHeight*_extraScale);
+  imgEl.style.width=scaledW+'px';
+  imgEl.style.height=scaledH+'px';
+  imgEl.style.left=Math.round(_extraImgX)+'px';
+  imgEl.style.top=Math.round(_extraImgY)+'px';
+}
+
+function miExtraSave(){
+  if(!_extraImgEl){toast('이미지를 먼저 업로드하세요','err');return;}
+  const outW=parseInt(document.getElementById('mi-extra-w').value)||800;
+  const outH=parseInt(document.getElementById('mi-extra-h').value)||800;
+
+  // compute frame rect in stage coords
+  const frame=document.getElementById('mi-extra-crop-frame');
+  const fX=parseInt(frame.style.left);
+  const fY=parseInt(frame.style.top);
+  const fW=parseInt(frame.style.width);
+  const fH=parseInt(frame.style.height);
+
+  // map frame top-left to image-space coords
+  // image is at _extraImgX, _extraImgY at _extraScale
+  // image-space x = (stageX - _extraImgX) / _extraScale
+  const srcX=(fX-_extraImgX)/_extraScale;
+  const srcY=(fY-_extraImgY)/_extraScale;
+  const srcW=fW/_extraScale;
+  const srcH=fH/_extraScale;
+
+  const canvas=document.createElement('canvas');
+  canvas.width=outW;
+  canvas.height=outH;
+  const ctx=canvas.getContext('2d');
+  // draw only the portion of the source image that falls within the frame
+  ctx.drawImage(_extraImgEl,srcX,srcY,srcW,srcH,0,0,outW,outH);
+
+  const url=canvas.toDataURL('image/png');
+  const a=document.createElement('a');
+  a.href=url;
+  a.download='extra_crop_'+outW+'x'+outH+'_'+Date.now()+'.png';
+  a.click();
+  toast('메인추가 크롭 PNG 저장 완료 ('+outW+'×'+outH+')','ok');
 }
 </script>
 </body>
