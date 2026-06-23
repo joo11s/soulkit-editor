@@ -549,11 +549,11 @@ select.pi{cursor:pointer}
       <div class="stitle" style="color:#a78bfa">메인추가 크롭</div>
       <div class="pr">
         <label class="pl">출력 가로 (px)</label>
-        <input type="number" class="pi" id="mi-extra-w" value="800" min="50" max="9999" oninput="miExtraUpdateFrame()">
+        <input type="number" class="pi" id="mi-extra-w" value="1000" min="50" max="9999" oninput="miExtraUpdateFrame()">
       </div>
       <div class="pr">
         <label class="pl">출력 세로 (px)</label>
-        <input type="number" class="pi" id="mi-extra-h" value="800" min="50" max="9999" oninput="miExtraUpdateFrame()">
+        <input type="number" class="pi" id="mi-extra-h" value="1000" min="50" max="9999" oninput="miExtraUpdateFrame()">
       </div>
       <button class="mi-gen-btn" onclick="miExtraSave()" style="background:#a78bfa;color:#0f0f0f;margin-top:4px">✂ 저장 (PNG 다운로드)</button>
       <button class="mi-gen-btn" onclick="miExtraSaveWeb()" style="background:#5b4fcf;color:#e0d9ff;margin-top:4px;border-color:#7c6fe0">↓ 웹용 PNG</button>
@@ -2378,8 +2378,8 @@ function miExtraInitCrop(dataUrl){
 
 function miExtraUpdateFrame(){
   if(!_extraImgEl)return;
-  const outW=parseInt(document.getElementById('mi-extra-w').value)||800;
-  const outH=parseInt(document.getElementById('mi-extra-h').value)||800;
+  const outW=parseInt(document.getElementById('mi-extra-w').value)||1000;
+  const outH=parseInt(document.getElementById('mi-extra-h').value)||1000;
   const ratio=outW/outH;
 
   // frame fills width or height of stage while matching ratio
@@ -2504,8 +2504,8 @@ function downloadWebPng(canvas, filename){
 
 function miExtraSave(){
   if(!_extraImgEl){toast('이미지를 먼저 업로드하세요','err');return;}
-  const outW=parseInt(document.getElementById('mi-extra-w').value)||800;
-  const outH=parseInt(document.getElementById('mi-extra-h').value)||800;
+  const outW=parseInt(document.getElementById('mi-extra-w').value)||1000;
+  const outH=parseInt(document.getElementById('mi-extra-h').value)||1000;
 
   // compute frame rect in stage coords
   const frame=document.getElementById('mi-extra-crop-frame');
@@ -2539,8 +2539,8 @@ function miExtraSave(){
 
 function miExtraSaveWeb(){
   if(!_extraImgEl){toast('이미지를 먼저 업로드하세요','err');return;}
-  const outW=parseInt(document.getElementById('mi-extra-w').value)||800;
-  const outH=parseInt(document.getElementById('mi-extra-h').value)||800;
+  const outW=parseInt(document.getElementById('mi-extra-w').value)||1000;
+  const outH=parseInt(document.getElementById('mi-extra-h').value)||1000;
 
   const frame=document.getElementById('mi-extra-crop-frame');
   const fX=parseInt(frame.style.left);
