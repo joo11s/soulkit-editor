@@ -2453,6 +2453,23 @@ function miExtraBindEvents(){
 
   document.addEventListener('touchend',()=>{_extraDragging=false;});
 
+  // keyboard arrow key move
+  document.addEventListener('keydown',e=>{
+    if(!_extraImgEl)return;
+    if(!document.getElementById('mi-extra-crop-wrap').classList.contains('show'))return;
+    const tag=(document.activeElement||{}).tagName||'';
+    if(/^(INPUT|TEXTAREA|SELECT)$/.test(tag))return;
+    const arrows=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
+    if(!arrows.includes(e.key))return;
+    e.preventDefault();
+    const step=e.shiftKey?20:5;
+    if(e.key==='ArrowLeft') _extraImgX-=step;
+    if(e.key==='ArrowRight')_extraImgX+=step;
+    if(e.key==='ArrowUp')   _extraImgY-=step;
+    if(e.key==='ArrowDown') _extraImgY+=step;
+    miExtraApplyTransform();
+  });
+
   // wheel zoom (centered on stage center)
   stage.addEventListener('wheel',e=>{
     if(!_extraImgEl)return;
