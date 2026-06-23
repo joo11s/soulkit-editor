@@ -150,6 +150,36 @@ select.pi{cursor:pointer}
 .mi-dl-btn:hover{background:#ff8555}
 @keyframes pixelJump{0%,100%{transform:translateY(0)}40%{transform:translateY(-14px)}60%{transform:translateY(-14px)}}
 .pixel-anim{animation:pixelJump .8s ease-in-out infinite}
+/* ===== 멀티 이미지 생성 ===== */
+.mi-count-group{display:flex;align-items:center;gap:4px;margin-top:6px;margin-bottom:2px}
+.cnt-btn{background:#1a1a1a;color:#666;border:1px solid #2a2a2a;font-size:10px;padding:3px 8px;border-radius:3px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.cnt-btn.on{background:#1a1209;border-color:#f5e6c860;color:#f5e6c8}
+.mi-grid-result{display:grid;gap:6px;width:100%}
+.mi-grid-result.cols2{grid-template-columns:1fr 1fr}
+.mi-grid-item{position:relative;cursor:pointer;border-radius:4px;overflow:hidden;border:2px solid transparent;transition:border-color .15s}
+.mi-grid-item:hover{border-color:#f5e6c880}
+.mi-grid-item.selected{border-color:#f5e6c8}
+.mi-grid-item img{display:block;width:100%;height:auto}
+/* ===== 폭 맞춤 + 크롭 ===== */
+.mi-wfit-section{margin-top:8px;display:none}
+.mi-wfit-section.show{display:block}
+.mi-wfit-row{display:flex;align-items:center;gap:4px;margin-top:4px}
+.mi-wfit-input{width:70px;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:3px;color:#e8e8e8;font-size:10px;padding:3px 5px;outline:none;font-family:'Noto Sans KR',sans-serif}
+.mi-wfit-input:focus{border-color:#f5e6c8}
+.mi-crop-btn{background:#1a1a2e;color:#a78bfa;border:1px solid #3d2d6e;font-size:10px;padding:3px 8px;border-radius:3px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.mi-crop-btn:hover{background:#252540;color:#c4b5fd}
+/* ===== 크롭 모달 ===== */
+.mi-crop-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9500;flex-direction:column;align-items:center;justify-content:center}
+.mi-crop-modal.show{display:flex}
+.mi-crop-header{display:flex;align-items:center;gap:10px;margin-bottom:10px;flex-wrap:wrap;justify-content:center}
+.mi-crop-container{position:relative;display:inline-block;line-height:0;max-width:90vw;max-height:70vh;overflow:hidden}
+.mi-crop-container img{display:block;max-width:90vw;max-height:70vh;pointer-events:none}
+.mi-crop-box{position:absolute;border:2px solid #f5e6c8;box-sizing:border-box;cursor:move}
+.mi-crop-overlay-top,.mi-crop-overlay-bottom,.mi-crop-overlay-left,.mi-crop-overlay-right{position:absolute;background:rgba(0,0,0,.5);pointer-events:none}
+.mi-crop-handle{position:absolute;width:10px;height:10px;background:#f5e6c8;border:1px solid #000;border-radius:1px}
+.mi-crop-footer{margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.crop-ratio-btn{background:#1a1a1a;color:#666;border:1px solid #2a2a2a;font-size:10px;padding:3px 8px;border-radius:3px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.crop-ratio-btn.on{background:#1a1209;border-color:#f5e6c860;color:#f5e6c8}
 
 </style>
 </head>
@@ -451,6 +481,18 @@ select.pi{cursor:pointer}
       <img id="mi-result-img" style="display:block;max-width:100%;max-height:78vh;border-radius:4px;box-shadow:0 4px 24px rgba(0,0,0,.6)">
       <canvas id="mi-c" style="position:absolute;top:0;left:0;pointer-events:auto;z-index:10"></canvas>
     </div>
+    <!-- 멀티 그리드 결과 -->
+    <div id="mi-grid-wrap" style="display:none;width:100%;max-width:700px;padding:0 16px"></div>
+    <!-- 폭 맞춤 + 크롭 -->
+    <div class="mi-wfit-section" id="mi-wfit-section">
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center">
+        <span style="font-size:9px;color:#555;letter-spacing:1px;text-transform:uppercase">폭 맞춤</span>
+        <input type="number" class="mi-wfit-input" id="mi-wfit-input" value="860" placeholder="출력 가로폭 (px)" min="100" max="5000">
+        <button class="cnt-btn" onclick="miApplyWidthFit()">폭맞춤</button>
+        <button class="mi-crop-btn" onclick="miOpenCrop()">✂ 크롭</button>
+      </div>
+      <div style="font-size:9px;color:#333;text-align:center;margin-top:4px" id="mi-mode-label">모드: 원본</div>
+    </div>
     <div class="mi-overlay" id="mi-overlay">
       <div class="pix-office">
         <div class="pix-char-wrap">
@@ -539,10 +581,48 @@ select.pi{cursor:pointer}
       <button class="preset-btn" onclick="miAppendPrompt('16:9 aspect ratio output.')">16:9</button>
       <button class="preset-btn" onclick="miAppendPrompt('4:3 aspect ratio output.')">4:3</button>
     </div>
+    <div class="mi-count-group">
+      <span style="font-size:9px;color:#555;margin-right:2px">생성 개수</span>
+      <button class="cnt-btn on" id="cnt1" onclick="miSetCount(1)">1장</button>
+      <button class="cnt-btn" id="cnt2" onclick="miSetCount(2)">2장</button>
+      <button class="cnt-btn" id="cnt3" onclick="miSetCount(3)">3장</button>
+      <button class="cnt-btn" id="cnt4" onclick="miSetCount(4)">4장</button>
+    </div>
     <button class="mi-gen-btn" id="mi-gen-btn" onclick="miGenerate()">✦ 이미지 생성</button>
     <div style="margin-top:8px;font-size:9px;color:#333;line-height:1.8;text-align:center">Gemini Nano Banana 2 (적용완료)</div>
   </div>
 
+</div>
+
+<!-- 크롭 모달 -->
+<div class="mi-crop-modal" id="mi-crop-modal">
+  <div class="mi-crop-header">
+    <span style="font-size:11px;color:#f5e6c8;font-weight:700;margin-right:6px">크롭 / 리사이즈</span>
+    <button class="crop-ratio-btn on" id="crop-ratio-free" onclick="miCropSetRatio('free',this)">자유</button>
+    <button class="crop-ratio-btn" id="crop-ratio-1x1" onclick="miCropSetRatio('1x1',this)">1:1</button>
+    <button class="crop-ratio-btn" id="crop-ratio-4x3" onclick="miCropSetRatio('4x3',this)">4:3</button>
+    <button class="crop-ratio-btn" id="crop-ratio-16x9" onclick="miCropSetRatio('16x9',this)">16:9</button>
+    <span style="font-size:9px;color:#555;margin-left:6px">출력폭</span>
+    <input type="number" class="mi-wfit-input" id="crop-out-width" value="860" placeholder="px" min="100" max="5000" style="width:60px">
+    <span style="font-size:9px;color:#555">px</span>
+  </div>
+  <div class="mi-crop-container" id="mi-crop-container">
+    <img id="mi-crop-img" src="" alt="crop">
+    <div class="mi-crop-box" id="mi-crop-box">
+      <div class="mi-crop-handle" data-h="tl" style="top:-5px;left:-5px;cursor:nw-resize"></div>
+      <div class="mi-crop-handle" data-h="tm" style="top:-5px;left:50%;margin-left:-5px;cursor:n-resize"></div>
+      <div class="mi-crop-handle" data-h="tr" style="top:-5px;right:-5px;cursor:ne-resize"></div>
+      <div class="mi-crop-handle" data-h="ml" style="top:50%;margin-top:-5px;left:-5px;cursor:w-resize"></div>
+      <div class="mi-crop-handle" data-h="mr" style="top:50%;margin-top:-5px;right:-5px;cursor:e-resize"></div>
+      <div class="mi-crop-handle" data-h="bl" style="bottom:-5px;left:-5px;cursor:sw-resize"></div>
+      <div class="mi-crop-handle" data-h="bm" style="bottom:-5px;left:50%;margin-left:-5px;cursor:s-resize"></div>
+      <div class="mi-crop-handle" data-h="br" style="bottom:-5px;right:-5px;cursor:se-resize"></div>
+    </div>
+  </div>
+  <div class="mi-crop-footer">
+    <button class="btn primary" onclick="miApplyCrop()" style="font-size:11px;padding:6px 16px">적용</button>
+    <button class="btn ghost" onclick="miCloseCrop()" style="font-size:11px">취소</button>
+  </div>
 </div>
 
 <div class="sbar">
@@ -1272,7 +1352,12 @@ let miCvObj=null, miObjs2=[], miSel2=null;
 let miHistory2=[], miHistIdx2=-1;
 let miSlots={orig:null,bg:null,design:null};
 let miResultUrl=null;
+let miResultUrls=[];
+let miGenerateCount=1;
 let miSize=1000, miFmt='png';
+let miCropMode='original'; // 'original' | 'letterbox' | 'width-fit' | 'crop'
+let miTargetWidth=null;
+let miCroppedCanvas=null;
 let _pixelTimer=null;
 
 // 탭 전환
@@ -1690,42 +1775,119 @@ function miPreset(text){
   document.querySelectorAll('.preset-btn').forEach(b=>b.classList.toggle('on',b.getAttribute('onclick').includes(text.replace(/'/g,"\'"))));
 }
 
+// 생성 개수 설정
+function miSetCount(n){
+  miGenerateCount=n;
+  [1,2,3,4].forEach(i=>document.getElementById('cnt'+i).classList.toggle('on',i===n));
+}
+
 // 이미지 생성
 function toImg(dataUrl){const mimeType=dataUrl.split(';')[0].split(':')[1];const base64=dataUrl.split(',')[1];return {base64,mimeType};}
+
+function miBuildApiPayload(){
+  const images=[toImg(miSlots.orig)];
+  let imageRoleNote='Image 1 is the main product photo — this exact product must remain unchanged in shape, color, and detail.';
+  if(miSlots.bg){images.push(toImg(miSlots.bg));imageRoleNote+=' Image 2 is a background style reference — strongly and clearly apply its mood, color palette, lighting, and background style (not its content/product) to the new background. Do not just hint at it subtly — make the resulting background visually similar in style to this reference.';}
+  if(miSlots.design){images.push(toImg(miSlots.design));imageRoleNote+=` Image ${images.length} is a design style reference — strongly and clearly apply its overall visual design, color scheme, decorative elements, and layout style to the result. Do not just hint at it subtly — the final image's design should closely resemble this reference's style.`;}
+  const prompt=document.getElementById('mi-prompt').value.trim();
+  const fixedPrompt=`${imageRoleNote}\n\nTask: ${prompt}\n\nRemove all existing text and watermarks. Do not add any new text. Keep the main product exactly as is, only change the background.\nMake it look like professional studio product photography for premium e-commerce advertising — soft realistic lighting, natural shadows and reflections, sharp focus, high detail, photorealistic.\n4K.`;
+  return {images,prompt:fixedPrompt};
+}
+
+async function miGenerateSingle(){
+  const payload=miBuildApiPayload();
+  const res=await fetch(GEMINI_EDIT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  const data=await res.json();
+  if(!data.base64)throw new Error('결과 이미지 없음');
+  return `data:${data.mimeType||'image/png'};base64,${data.base64}`;
+}
+
+function miShowSingleResult(url){
+  miResultUrl=url;
+  miCropMode='original';
+  miCroppedCanvas=null;
+  const resultImg=document.getElementById('mi-result-img');
+  const placeholder=document.getElementById('mi-placeholder');
+  const resultWrap=document.getElementById('mi-result-wrap');
+  const gridWrap=document.getElementById('mi-grid-wrap');
+  gridWrap.style.display='none';
+  resultImg.onload=()=>{
+    if(!window.miCvObj)miInitCanvas();
+    setTimeout(()=>{miResizeCanvas();setTimeout(miResizeCanvas,200);},50);
+  };
+  resultImg.src=url;
+  resultImg.style.display='block';
+  placeholder.style.display='none';
+  resultWrap.style.display='inline-block';
+  document.getElementById('mi-wfit-section').classList.add('show');
+  document.getElementById('mi-mode-label').textContent='모드: 원본';
+}
+
+function miShowGridResult(urls){
+  miResultUrls=urls;
+  miResultUrl=null;
+  miCropMode='original';
+  miCroppedCanvas=null;
+  const placeholder=document.getElementById('mi-placeholder');
+  const resultWrap=document.getElementById('mi-result-wrap');
+  const gridWrap=document.getElementById('mi-grid-wrap');
+  resultWrap.style.display='none';
+  placeholder.style.display='none';
+  gridWrap.style.display='block';
+  gridWrap.innerHTML='';
+  const grid=document.createElement('div');
+  grid.className='mi-grid-result cols2';
+  urls.forEach((url,idx)=>{
+    const item=document.createElement('div');
+    item.className='mi-grid-item';
+    item.id='mi-grid-item-'+idx;
+    const img=document.createElement('img');
+    img.src=url;
+    img.alt='생성 이미지 '+(idx+1);
+    item.appendChild(img);
+    item.onclick=()=>miSelectGridItem(idx);
+    grid.appendChild(item);
+  });
+  gridWrap.appendChild(grid);
+  document.getElementById('mi-wfit-section').classList.remove('show');
+}
+
+function miSelectGridItem(idx){
+  document.querySelectorAll('.mi-grid-item').forEach(el=>el.classList.remove('selected'));
+  const item=document.getElementById('mi-grid-item-'+idx);
+  if(item)item.classList.add('selected');
+  miShowSingleResult(miResultUrls[idx]);
+  toast('이미지 '+(idx+1)+' 선택됨','ok');
+}
+
 async function miGenerate(){
   if(!miSlots.orig){toast('원본 이미지를 먼저 업로드하세요','err');return;}
   const prompt=document.getElementById('mi-prompt').value.trim();
   if(!prompt){toast('프롬프트를 입력하세요','err');return;}
   const btn=document.getElementById('mi-gen-btn');
   btn.disabled=true;
-  miShowOv('이미지 생성 중...','Gemini가 이미지를 만들고 있어요\n잠깐만요! (10~30초)');
+  const n=miGenerateCount;
+  miShowOv('이미지 생성 중... ('+n+'장)','Gemini가 이미지를 만들고 있어요\n잠깐만요! (10~30초)');
   miSetStep(1,'done');
   try{
     miSetStep(2,'run','준비 중...');
-    const images=[toImg(miSlots.orig)];
-    let imageRoleNote='Image 1 is the main product photo — this exact product must remain unchanged in shape, color, and detail.';
-    if(miSlots.bg){images.push(toImg(miSlots.bg));imageRoleNote+=' Image 2 is a background style reference — strongly and clearly apply its mood, color palette, lighting, and background style (not its content/product) to the new background. Do not just hint at it subtly — make the resulting background visually similar in style to this reference.';}
-    if(miSlots.design){images.push(toImg(miSlots.design));imageRoleNote+=` Image ${images.length} is a design style reference — strongly and clearly apply its overall visual design, color scheme, decorative elements, and layout style to the result. Do not just hint at it subtly — the final image's design should closely resemble this reference's style.`;}
     miSetStep(2,'done');
-    const fixedPrompt=`${imageRoleNote}\n\nTask: ${prompt}\n\nRemove all existing text and watermarks. Do not add any new text. Keep the main product exactly as is, only change the background.\nMake it look like professional studio product photography for premium e-commerce advertising — soft realistic lighting, natural shadows and reflections, sharp focus, high detail, photorealistic.\n4K.`;
-    miSetStep(3,'run','생성 중...');
-    const geminiRes=await fetch(GEMINI_EDIT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({images,prompt:fixedPrompt})});
-    const data=await geminiRes.json();
-    console.log('[gemini response]',JSON.stringify(data).slice(0,400));
-    if(!data.base64)throw new Error('결과 이미지 없음');
-    const resultUrl=`data:${data.mimeType||'image/png'};base64,${data.base64}`;
-    miResultUrl=resultUrl;
-    const resultImg=document.getElementById('mi-result-img');
-    const placeholder=document.getElementById('mi-placeholder');
-    const resultWrap=document.getElementById('mi-result-wrap');
-    resultImg.onload=()=>{
-      if(!window.miCvObj)miInitCanvas();
-      setTimeout(()=>{miResizeCanvas();setTimeout(miResizeCanvas,200);},50);
-    };
-    resultImg.src=resultUrl;
-    resultImg.style.display='block';
-    placeholder.style.display='none';
-    resultWrap.style.display='inline-block';
+    miSetStep(3,'run','생성 중... ('+n+'장 병렬)');
+    if(n===1){
+      const url=await miGenerateSingle();
+      miShowSingleResult(url);
+    } else {
+      const promises=Array.from({length:n},()=>miGenerateSingle());
+      const results=await Promise.allSettled(promises);
+      const urls=results.filter(r=>r.status==='fulfilled').map(r=>r.value);
+      if(urls.length===0)throw new Error('모든 이미지 생성 실패');
+      if(urls.length===1){
+        miShowSingleResult(urls[0]);
+      } else {
+        miShowGridResult(urls);
+      }
+      if(urls.length<n)toast(urls.length+'장 생성 완료 ('+(n-urls.length)+'장 실패)','ok');
+    }
     miSetStep(3,'done');miSetStep(4,'done');
     toast('이미지 생성 완료!','ok');miSetStatus('완료 ✓');
   }catch(e){
@@ -1736,36 +1898,72 @@ async function miGenerate(){
 }
 
 // 다운로드
-function miSetSize(s){miSize=s;['sz500','sz1000','sz1200','szOrig'].forEach(id=>document.getElementById(id).classList.toggle('on',id==='sz'+s||(s===0&&id==='szOrig')));}
+function miSetSize(s){
+  miSize=s;
+  ['sz500','sz1000','sz1200','szOrig'].forEach(id=>document.getElementById(id).classList.toggle('on',id==='sz'+s||(s===0&&id==='szOrig')));
+  // 500/1000/1200 = letterbox mode; 0 = original (or crop/width-fit override)
+  if(miCropMode!=='crop'&&miCropMode!=='width-fit'){
+    miCropMode=s===0?'original':'letterbox';
+  }
+}
 function miSetFmt(f){miFmt=f;['fmtjpg','fmtpng'].forEach(id=>document.getElementById(id).classList.toggle('on',id==='fmt'+f));}
-function miDownload(){
+
+function miApplyWidthFit(){
   if(!miResultUrl){toast('생성된 이미지가 없습니다','err');return;}
+  const v=parseInt(document.getElementById('mi-wfit-input').value)||860;
+  miTargetWidth=v;
+  miCropMode='width-fit';
+  document.getElementById('mi-mode-label').textContent='모드: 폭맞춤 ('+v+'px)';
+  toast('폭맞춤 설정: '+v+'px — 저장 버튼으로 다운로드','ok');
+}
+
+function miDownload(){
+  const fmt=miFmt==='png'?'image/png':'image/jpeg';
+  const ext=miFmt==='png'?'png':'jpg';
+
+  // crop mode: use pre-computed canvas
+  if(miCropMode==='crop'&&miCroppedCanvas){
+    const url=miCroppedCanvas.toDataURL(fmt,miFmt==='jpg'?0.92:1);
+    const a=document.createElement('a');a.href=url;a.download='happybiz_main_crop_'+Date.now()+'.'+ext;a.click();
+    toast('크롭 이미지 저장 완료','ok');return;
+  }
+
+  const srcUrl=miResultUrl;
+  if(!srcUrl){toast('생성된 이미지가 없습니다','err');return;}
   const img=new Image();img.crossOrigin='anonymous';
   img.onload=()=>{
-    const fmt=miFmt==='png'?'image/png':'image/jpeg';
-    const ext=miFmt==='png'?'png':'jpg';
     const canvas=document.createElement('canvas');
-    if(miSize===0){
-      // 원본 비율 그대로
-      canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
-      canvas.getContext('2d').drawImage(img,0,0);
-    } else {
-      // 정사각형 letterbox (흰 배경)
+    if(miCropMode==='width-fit'&&miTargetWidth){
+      // 비율 유지하며 폭 맞춤
+      const tw=miTargetWidth;
+      const th=Math.round(img.naturalHeight*(tw/img.naturalWidth));
+      canvas.width=tw;canvas.height=th;
+      canvas.getContext('2d').drawImage(img,0,0,tw,th);
+      const url=canvas.toDataURL(fmt,miFmt==='jpg'?0.92:1);
+      const a=document.createElement('a');a.href=url;a.download='happybiz_main_w'+tw+'_'+Date.now()+'.'+ext;a.click();
+      toast('폭맞춤 '+tw+'px '+ext.toUpperCase()+' 저장 완료','ok');
+    } else if(miCropMode==='letterbox'&&miSize>0){
       canvas.width=miSize;canvas.height=miSize;
       const ctx=canvas.getContext('2d');
       ctx.fillStyle='#ffffff';ctx.fillRect(0,0,miSize,miSize);
       const ratio=Math.min(miSize/img.naturalWidth,miSize/img.naturalHeight);
-      const w=Math.round(img.naturalWidth*ratio);
-      const h=Math.round(img.naturalHeight*ratio);
+      const w=Math.round(img.naturalWidth*ratio);const h=Math.round(img.naturalHeight*ratio);
       ctx.drawImage(img,(miSize-w)/2,(miSize-h)/2,w,h);
+      const url=canvas.toDataURL(fmt,miFmt==='jpg'?0.92:1);
+      const label=miSize+'x'+miSize;
+      const a=document.createElement('a');a.href=url;a.download='happybiz_main_'+label+'_'+Date.now()+'.'+ext;a.click();
+      toast(label+' '+ext.toUpperCase()+' 저장 완료','ok');
+    } else {
+      // original
+      canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+      canvas.getContext('2d').drawImage(img,0,0);
+      const url=canvas.toDataURL(fmt,miFmt==='jpg'?0.92:1);
+      const a=document.createElement('a');a.href=url;a.download='happybiz_main_orig_'+Date.now()+'.'+ext;a.click();
+      toast('원본 '+ext.toUpperCase()+' 저장 완료','ok');
     }
-    const url=canvas.toDataURL(fmt,miFmt==='jpg'?0.92:1);
-    const label=miSize===0?'orig':miSize+'x'+miSize;
-    const a=document.createElement('a');a.href=url;a.download='happybiz_main_'+label+'_'+Date.now()+'.'+ext;a.click();
-    toast(label+' '+ext.toUpperCase()+' 저장 완료','ok');
   };
-  img.onerror=()=>{const a=document.createElement('a');a.href=miResultUrl;a.download='happybiz_main_'+Date.now()+'.'+miFmt;a.target='_blank';a.click();};
-  img.src=miResultUrl;
+  img.onerror=()=>{const a=document.createElement('a');a.href=srcUrl;a.download='happybiz_main_'+Date.now()+'.'+miFmt;a.target='_blank';a.click();};
+  img.src=srcUrl;
 }
 
 // 초기화
@@ -1773,10 +1971,16 @@ function miClearAll(){
   ['orig','bg','design'].forEach(k=>miSlotClear(k));
   const wrap=document.getElementById('mi-result-wrap');
   const placeholder=document.getElementById('mi-placeholder');
+  const gridWrap=document.getElementById('mi-grid-wrap');
+  const wfitSection=document.getElementById('mi-wfit-section');
   if(wrap)wrap.style.display='none';
   if(placeholder)placeholder.style.display='flex';
+  if(gridWrap){gridWrap.style.display='none';gridWrap.innerHTML='';}
+  if(wfitSection)wfitSection.classList.remove('show');
   if(window.miCvObj){window.miCvObj.clear();miObjs2=[];}
   miHistory2=[];miHistIdx2=-1;miResultUrl=null;
+  miResultUrls=[];miTargetWidth=null;miCropMode='original';miCroppedCanvas=null;
+  miCloseCrop();
   document.getElementById('mi-prompt').value='';
   document.querySelectorAll('.preset-btn').forEach(b=>b.classList.remove('on'));
   miSetStatus('대기중');miResetSteps();
@@ -1795,6 +1999,177 @@ function miSetStep(n,state,msg){
   else{el.textContent=(msg||defaults[n-1]);el.className='st run';}
 }
 function miResetSteps(){const defaults=['원본 이미지 대기','R2 업로드','이미지 생성','완료'];[1,2,3,4].forEach((n,i)=>{const el=document.getElementById('mi-s'+n);if(el){el.textContent=defaults[i];el.className='st';}});}
+
+/* ===== 크롭 모달 ===== */
+let _cropRatio='free'; // 'free'|'1x1'|'4x3'|'16x9'
+let _cropBox={x:0,y:0,w:200,h:200};
+let _cropDrag=null; // {type:'move'|handle, startX,startY,origBox}
+
+function miCropSetRatio(r,btn){
+  _cropRatio=r;
+  document.querySelectorAll('.crop-ratio-btn').forEach(b=>b.classList.remove('on'));
+  btn.classList.add('on');
+  _cropApplyRatioConstraint();
+  _cropRenderBox();
+}
+
+function _cropRatioValue(){
+  if(_cropRatio==='1x1')return 1;
+  if(_cropRatio==='4x3')return 4/3;
+  if(_cropRatio==='16x9')return 16/9;
+  return 0; // free
+}
+
+function _cropApplyRatioConstraint(){
+  const rv=_cropRatioValue();
+  if(!rv)return;
+  _cropBox.h=Math.round(_cropBox.w/rv);
+  const imgEl=document.getElementById('mi-crop-img');
+  const maxH=imgEl.offsetHeight;
+  if(_cropBox.h>maxH){_cropBox.h=maxH;_cropBox.w=Math.round(_cropBox.h*rv);}
+  if(_cropBox.y+_cropBox.h>maxH)_cropBox.y=Math.max(0,maxH-_cropBox.h);
+}
+
+function _cropRenderBox(){
+  const box=document.getElementById('mi-crop-box');
+  box.style.left=_cropBox.x+'px';
+  box.style.top=_cropBox.y+'px';
+  box.style.width=_cropBox.w+'px';
+  box.style.height=_cropBox.h+'px';
+}
+
+function miOpenCrop(){
+  if(!miResultUrl){toast('생성된 이미지가 없습니다','err');return;}
+  const modal=document.getElementById('mi-crop-modal');
+  const cropImg=document.getElementById('mi-crop-img');
+  cropImg.src=miResultUrl;
+  cropImg.onload=()=>{
+    const iw=cropImg.offsetWidth, ih=cropImg.offsetHeight;
+    // default crop box: centered 80%
+    const margin=Math.round(Math.min(iw,ih)*0.1);
+    _cropBox={x:margin,y:margin,w:iw-margin*2,h:ih-margin*2};
+    _cropRatio='free';
+    document.querySelectorAll('.crop-ratio-btn').forEach(b=>b.classList.remove('on'));
+    document.getElementById('crop-ratio-free').classList.add('on');
+    _cropRenderBox();
+    _cropBindEvents();
+  };
+  modal.classList.add('show');
+}
+
+function miCloseCrop(){
+  const modal=document.getElementById('mi-crop-modal');
+  if(modal)modal.classList.remove('show');
+}
+
+function _cropClamp(val,min,max){return Math.max(min,Math.min(max,val));}
+
+function _cropBindEvents(){
+  const box=document.getElementById('mi-crop-box');
+  const container=document.getElementById('mi-crop-container');
+
+  function getPos(e){
+    const r=container.getBoundingClientRect();
+    const cx=e.touches?e.touches[0].clientX:e.clientX;
+    const cy=e.touches?e.touches[0].clientY:e.clientY;
+    return {x:cx-r.left,y:cy-r.top};
+  }
+
+  function onDown(e){
+    e.preventDefault();
+    const pos=getPos(e);
+    const h=e.target.dataset&&e.target.dataset.h;
+    _cropDrag={type:h||'move',startX:pos.x,startY:pos.y,origBox:{..._cropBox}};
+  }
+
+  function onMove(e){
+    if(!_cropDrag)return;
+    e.preventDefault();
+    const pos=getPos(e);
+    const dx=pos.x-_cropDrag.startX;
+    const dy=pos.y-_cropDrag.startY;
+    const ob=_cropDrag.origBox;
+    const imgEl=document.getElementById('mi-crop-img');
+    const iw=imgEl.offsetWidth, ih=imgEl.offsetHeight;
+    const minSz=20;
+    const rv=_cropRatioValue();
+
+    if(_cropDrag.type==='move'){
+      _cropBox.x=_cropClamp(ob.x+dx,0,iw-ob.w);
+      _cropBox.y=_cropClamp(ob.y+dy,0,ih-ob.h);
+    } else {
+      let {x,y,w,h}=ob;
+      const t=_cropDrag.type;
+      if(t==='br'||t==='mr'||t==='tr'){w=_cropClamp(ob.w+dx,minSz,iw-ob.x);}
+      if(t==='bl'||t==='ml'||t==='tl'){const nw=_cropClamp(ob.w-dx,minSz,ob.x+ob.w);x=ob.x+ob.w-nw;w=nw;}
+      if(t==='br'||t==='bm'||t==='bl'){h=_cropClamp(ob.h+dy,minSz,ih-ob.y);}
+      if(t==='tr'||t==='tm'||t==='tl'){const nh=_cropClamp(ob.h-dy,minSz,ob.y+ob.h);y=ob.y+ob.h-nh;h=nh;}
+      // apply ratio constraint
+      if(rv){
+        if(t==='tm'||t==='bm'){w=Math.round(h*rv);x=_cropClamp(ob.x,0,iw-w);}
+        else{h=Math.round(w/rv);}
+      }
+      _cropBox={x,y,w,h};
+    }
+    _cropRenderBox();
+  }
+
+  function onUp(){_cropDrag=null;}
+
+  // remove old listeners by cloning
+  const newBox=box.cloneNode(true);
+  box.parentNode.replaceChild(newBox,box);
+  const handles=newBox.querySelectorAll('.mi-crop-handle');
+
+  newBox.addEventListener('mousedown',onDown);
+  newBox.addEventListener('touchstart',onDown,{passive:false});
+  handles.forEach(h=>{
+    h.addEventListener('mousedown',e=>{e.stopPropagation();onDown(e);});
+    h.addEventListener('touchstart',e=>{e.stopPropagation();onDown(e);},{passive:false});
+  });
+
+  document.addEventListener('mousemove',onMove);
+  document.addEventListener('mouseup',onUp);
+  document.addEventListener('touchmove',onMove,{passive:false});
+  document.addEventListener('touchend',onUp);
+}
+
+function miApplyCrop(){
+  if(!miResultUrl){miCloseCrop();return;}
+  const imgEl=document.getElementById('mi-crop-img');
+  const dispW=imgEl.offsetWidth, dispH=imgEl.offsetHeight;
+  const natW=imgEl.naturalWidth, natH=imgEl.naturalHeight;
+  const scaleX=natW/dispW, scaleY=natH/dispH;
+
+  const sx=Math.round(_cropBox.x*scaleX);
+  const sy=Math.round(_cropBox.y*scaleY);
+  const sw=Math.round(_cropBox.w*scaleX);
+  const sh=Math.round(_cropBox.h*scaleY);
+
+  const outW=parseInt(document.getElementById('crop-out-width').value)||sw;
+  const outH=Math.round(sh*(outW/sw));
+
+  const canvas=document.createElement('canvas');
+  canvas.width=outW;canvas.height=outH;
+  const ctx=canvas.getContext('2d');
+
+  const tmpImg=new Image();
+  tmpImg.crossOrigin='anonymous';
+  tmpImg.onload=()=>{
+    ctx.drawImage(tmpImg,sx,sy,sw,sh,0,0,outW,outH);
+    miCroppedCanvas=canvas;
+    miCropMode='crop';
+    // show cropped result
+    const croppedUrl=canvas.toDataURL('image/png');
+    miShowSingleResult(croppedUrl);
+    miResultUrl=croppedUrl; // update so wfit also works
+    document.getElementById('mi-mode-label').textContent='모드: 크롭 적용됨';
+    miCloseCrop();
+    toast('크롭 적용 완료','ok');
+  };
+  tmpImg.onerror=()=>{toast('크롭 처리 오류','err');miCloseCrop();};
+  tmpImg.src=miResultUrl;
+}
 </script>
 </body>
 </html>
