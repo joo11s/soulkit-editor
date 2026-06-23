@@ -924,9 +924,30 @@ async function autoProcess(origW,origH){
   setStep(4,'run','번역 삽입 중...');
   objs.forEach(o=>cv.remove(o));objs=[];
   if(!fontsReady){await document.fonts.ready;fontsReady=true;}
+  const placedTxts=[];
   items.forEach(item=>{
     const txt=makeTextLayer(item,item.translated||item.text,true);
+    // 겹침 방지: 이미 배치된 텍스트박스와 겹치면 아래로 밀어내기
+    let tries=0;
+    while(tries<20){
+      const nb=txt.getBoundingRect();
+      let overlap=null;
+      for(const p of placedTxts){
+        const pb=p.getBoundingRect();
+        if(nb.left<pb.left+pb.width && nb.left+nb.width>pb.left &&
+           nb.top<pb.top+pb.height && nb.top+nb.height>pb.top){
+          if(!overlap||pb.top+pb.height>overlap.top+overlap.height) overlap=pb;
+        }
+      }
+      if(!overlap) break;
+      const newTop=overlap.top+overlap.height+6;
+      if(newTop>=cv.height) break; // 캔버스 밖으로 나가면 중단
+      txt.set('top', txt.top+(newTop-nb.top));
+      txt.setCoords();
+      tries++;
+    }
     cv.bringToFront(txt);
+    placedTxts.push(txt);
   });
   updateLayers();updateInfo();setStep(4,'done');cv.requestRenderAll();
 
