@@ -174,8 +174,10 @@ select.pi{cursor:pointer}
 /* ===== 메인추가이미지 크롭 도구 ===== */
 .mi-extra-crop-wrap{display:none;width:100%;flex-direction:column;align-items:center;padding:16px 0;gap:10px}
 .mi-extra-crop-wrap.show{display:flex}
+.mi-extra-crop-stage-container{position:relative;display:inline-block;flex-shrink:0}
 .mi-extra-crop-stage{position:relative;overflow:hidden;background:#060606;border-radius:6px;cursor:grab;user-select:none;flex-shrink:0}
 .mi-extra-crop-stage:active{cursor:grabbing}
+.mi-extra-crop-label-overlay{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);z-index:10;pointer-events:none;background:rgba(0,0,0,.55);padding:6px 14px;border-radius:4px;white-space:nowrap}
 .mi-extra-crop-img{position:absolute;top:0;left:0;transform-origin:0 0;pointer-events:none;image-rendering:auto}
 .mi-extra-crop-overlay-top,.mi-extra-crop-overlay-bottom,.mi-extra-crop-overlay-left,.mi-extra-crop-overlay-right{position:absolute;background:rgba(0,0,0,.55);pointer-events:none;z-index:2}
 .mi-extra-crop-frame{position:absolute;border:2px solid #f5e6c8;box-sizing:border-box;pointer-events:none;z-index:3;box-shadow:0 0 0 9999px rgba(0,0,0,.55)}
@@ -213,6 +215,7 @@ select.pi{cursor:pointer}
       <button class="fmt-btn" id="fmtjpg" onclick="miSetFmt('jpg')">JPG</button>
       <button class="fmt-btn on" id="fmtpng" onclick="miSetFmt('png')">PNG</button>
       <button class="mi-dl-btn" onclick="miDownload()">↓ 저장</button>
+      <button class="mi-dl-btn" onclick="miDownloadWeb()" style="background:#5b4fcf;color:#e0d9ff">↓ 웹용 PNG</button>
     </div>
     <button class="btn undo-btn" onclick="doUndo()" title="실행취소 Ctrl+Z">↩</button>
     <button class="btn undo-btn" onclick="doRedo()" title="다시실행 Ctrl+Y">↪</button>
@@ -223,6 +226,7 @@ select.pi{cursor:pointer}
     <button class="btn ghost" onclick="clearAll()" style="font-size:10px">초기화</button>
     <button class="btn ghost" onclick="saveJPG()" style="font-size:10px">JPG</button>
     <button class="btn primary" onclick="savePNG()">↓ PNG</button>
+    <button class="btn primary" onclick="saveWebPNG()" style="background:#5b4fcf;color:#e0d9ff">↓ 웹용 PNG</button>
   </div>
 </div>
 
@@ -514,10 +518,12 @@ select.pi{cursor:pointer}
     </div>
     <!-- 메인추가이미지 크롭 UI -->
     <div class="mi-extra-crop-wrap" id="mi-extra-crop-wrap">
-      <div class="mi-extra-crop-label">메인추가 크롭 — 이미지를 드래그하여 위치 조정, 휠로 확대/축소</div>
-      <div class="mi-extra-crop-stage" id="mi-extra-crop-stage">
-        <img class="mi-extra-crop-img" id="mi-extra-crop-img-el" src="" alt="">
-        <div class="mi-extra-crop-frame" id="mi-extra-crop-frame"></div>
+      <div class="mi-extra-crop-stage-container">
+        <div class="mi-extra-crop-stage" id="mi-extra-crop-stage">
+          <img class="mi-extra-crop-img" id="mi-extra-crop-img-el" src="" alt="">
+          <div class="mi-extra-crop-frame" id="mi-extra-crop-frame"></div>
+        </div>
+        <div class="mi-extra-crop-label mi-extra-crop-label-overlay">메인추가 크롭 — 이미지를 드래그하여 위치 조정, 휠로 확대/축소</div>
       </div>
     </div>
 
@@ -550,6 +556,7 @@ select.pi{cursor:pointer}
         <input type="number" class="pi" id="mi-extra-h" value="800" min="50" max="9999" oninput="miExtraUpdateFrame()">
       </div>
       <button class="mi-gen-btn" onclick="miExtraSave()" style="background:#a78bfa;color:#0f0f0f;margin-top:4px">✂ 저장 (PNG 다운로드)</button>
+      <button class="mi-gen-btn" onclick="miExtraSaveWeb()" style="background:#5b4fcf;color:#e0d9ff;margin-top:4px;border-color:#7c6fe0">↓ 웹용 PNG</button>
     </div>
     <div class="sec">
       <div class="stitle">속성</div>
@@ -1226,6 +1233,20 @@ function savePNG(){
   const url=cv.toDataURL({format:'png',multiplier:1});
   const a=document.createElement('a');a.href=url;a.download='happybiz_'+Date.now()+'.png';a.click();
   toast('PNG 저장 완료','ok');
+}
+function saveWebPNG(){
+  if(!loaded){toast('이미지를 먼저 로드하세요','err');return;}
+  cv.discardActiveObject();cv.requestRenderAll();
+  const dataUrl=cv.toDataURL({format:'png',multiplier:1});
+  const img=new Image();
+  img.onload=()=>{
+    const tmpCv=document.createElement('canvas');
+    tmpCv.width=img.naturalWidth;tmpCv.height=img.naturalHeight;
+    tmpCv.getContext('2d').drawImage(img,0,0);
+    downloadWebPng(tmpCv,'happybiz_웹용_'+Date.now()+'.png');
+    toast('웹용 PNG 저장 완료','ok');
+  };
+  img.src=dataUrl;
 }
 function saveJPG(){
   if(!loaded){toast('이미지를 먼저 로드하세요','err');return;}
@@ -2008,6 +2029,44 @@ function miDownload(){
   img.src=srcUrl;
 }
 
+function miDownloadWeb(){
+  // crop mode: use pre-computed canvas
+  if(miCropMode==='crop'&&miCroppedCanvas){
+    downloadWebPng(miCroppedCanvas,'happybiz_main_crop_웹용_'+Date.now()+'.png');
+    toast('웹용 PNG (크롭) 저장 완료','ok');return;
+  }
+  const srcUrl=miResultUrl;
+  if(!srcUrl){toast('생성된 이미지가 없습니다','err');return;}
+  const img=new Image();img.crossOrigin='anonymous';
+  img.onload=()=>{
+    const canvas=document.createElement('canvas');
+    if(miCropMode==='width-fit'&&miTargetWidth){
+      const tw=miTargetWidth;
+      const th=Math.round(img.naturalHeight*(tw/img.naturalWidth));
+      canvas.width=tw;canvas.height=th;
+      canvas.getContext('2d').drawImage(img,0,0,tw,th);
+      downloadWebPng(canvas,'happybiz_main_w'+tw+'_웹용_'+Date.now()+'.png');
+      toast('웹용 PNG (폭맞춤 '+tw+'px) 저장 완료','ok');
+    } else if(miCropMode==='letterbox'&&miSize>0){
+      canvas.width=miSize;canvas.height=miSize;
+      const ctx=canvas.getContext('2d');
+      ctx.fillStyle='#ffffff';ctx.fillRect(0,0,miSize,miSize);
+      const ratio=Math.min(miSize/img.naturalWidth,miSize/img.naturalHeight);
+      const w=Math.round(img.naturalWidth*ratio);const h=Math.round(img.naturalHeight*ratio);
+      ctx.drawImage(img,(miSize-w)/2,(miSize-h)/2,w,h);
+      downloadWebPng(canvas,'happybiz_main_'+miSize+'x'+miSize+'_웹용_'+Date.now()+'.png');
+      toast('웹용 PNG ('+miSize+'x'+miSize+') 저장 완료','ok');
+    } else {
+      canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+      canvas.getContext('2d').drawImage(img,0,0);
+      downloadWebPng(canvas,'happybiz_main_orig_웹용_'+Date.now()+'.png');
+      toast('웹용 PNG (원본) 저장 완료','ok');
+    }
+  };
+  img.onerror=()=>{toast('웹용 PNG 변환 오류','err');};
+  img.src=srcUrl;
+}
+
 // 초기화
 function miClearAll(){
   ['orig','bg','design'].forEach(k=>miSlotClear(k));
@@ -2269,6 +2328,9 @@ function miExtraSlotClear(){
   document.getElementById('mi-extra-crop-wrap').classList.remove('show');
   document.getElementById('mi-extra-props').style.display='none';
   _extraImgEl=null;
+  // restore canvas placeholder icon
+  const _phc=document.getElementById('mi-placeholder');
+  if(_phc&&!document.getElementById('mi-result-wrap').style.display.includes('block'))_phc.style.display='flex';
 }
 
 function miExtraInitCrop(dataUrl){
@@ -2302,6 +2364,9 @@ function miExtraInitCrop(dataUrl){
     // show UI
     document.getElementById('mi-extra-crop-wrap').classList.add('show');
     document.getElementById('mi-extra-props').style.display='block';
+    // hide canvas placeholder icon while crop mode is active
+    const _ph=document.getElementById('mi-placeholder');
+    if(_ph)_ph.style.display='none';
 
     // bind events (once)
     miExtraBindEvents();
@@ -2416,6 +2481,27 @@ function miExtraApplyTransform(){
   imgEl.style.top=Math.round(_extraImgY)+'px';
 }
 
+function downloadWebPng(canvas, filename){
+  const maxSize=1080;
+  const w=canvas.width;
+  const h=canvas.height;
+  let outW=w, outH=h;
+  if(Math.max(w,h)>maxSize){
+    if(w>=h){outW=maxSize;outH=Math.round(h*maxSize/w);}
+    else{outH=maxSize;outW=Math.round(w*maxSize/h);}
+  }
+  const tmpCanvas=document.createElement('canvas');
+  tmpCanvas.width=outW;tmpCanvas.height=outH;
+  const ctx=tmpCanvas.getContext('2d');
+  ctx.drawImage(canvas,0,0,outW,outH);
+  tmpCanvas.toBlob(function(blob){
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url;a.download=filename;a.click();
+    URL.revokeObjectURL(url);
+  },'image/png');
+}
+
 function miExtraSave(){
   if(!_extraImgEl){toast('이미지를 먼저 업로드하세요','err');return;}
   const outW=parseInt(document.getElementById('mi-extra-w').value)||800;
@@ -2449,6 +2535,31 @@ function miExtraSave(){
   a.download='extra_crop_'+outW+'x'+outH+'_'+Date.now()+'.png';
   a.click();
   toast('메인추가 크롭 PNG 저장 완료 ('+outW+'×'+outH+')','ok');
+}
+
+function miExtraSaveWeb(){
+  if(!_extraImgEl){toast('이미지를 먼저 업로드하세요','err');return;}
+  const outW=parseInt(document.getElementById('mi-extra-w').value)||800;
+  const outH=parseInt(document.getElementById('mi-extra-h').value)||800;
+
+  const frame=document.getElementById('mi-extra-crop-frame');
+  const fX=parseInt(frame.style.left);
+  const fY=parseInt(frame.style.top);
+  const fW=parseInt(frame.style.width);
+  const fH=parseInt(frame.style.height);
+
+  const srcX=(fX-_extraImgX)/_extraScale;
+  const srcY=(fY-_extraImgY)/_extraScale;
+  const srcW=fW/_extraScale;
+  const srcH=fH/_extraScale;
+
+  const canvas=document.createElement('canvas');
+  canvas.width=outW;
+  canvas.height=outH;
+  canvas.getContext('2d').drawImage(_extraImgEl,srcX,srcY,srcW,srcH,0,0,outW,outH);
+
+  downloadWebPng(canvas,'extra_crop_'+outW+'x'+outH+'_웹용_'+Date.now()+'.png');
+  toast('메인추가 크롭 웹용 PNG 저장 완료 ('+outW+'×'+outH+')','ok');
 }
 </script>
 </body>
