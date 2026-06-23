@@ -2477,7 +2477,8 @@ function miExtraBindEvents(){
     const rect=stage.getBoundingClientRect();
     const pivotX=e.clientX-rect.left;
     const pivotY=e.clientY-rect.top;
-    const factor=e.deltaY<0?1.1:0.9;
+    const isFine=e.shiftKey||e.ctrlKey||e.altKey;
+    const factor=e.deltaY<0?(isFine?1.02:1.1):(isFine?0.98:0.9);
     const newScale=Math.max(0.05,Math.min(20,_extraScale*factor));
     // adjust offset so the pivot point stays fixed
     _extraImgX=pivotX+((_extraImgX-pivotX)*(newScale/_extraScale));
