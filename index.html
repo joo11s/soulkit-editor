@@ -1791,7 +1791,8 @@ function miBuildApiPayload(){
   if(miSlots.design){images.push(toImg(miSlots.design));imageRoleNote+=` Image ${images.length} is a design style reference — strongly and clearly apply its overall visual design, color scheme, decorative elements, and layout style to the result. Do not just hint at it subtly — the final image's design should closely resemble this reference's style.`;}
   const prompt=document.getElementById('mi-prompt').value.trim();
   const fixedPrompt=`${imageRoleNote}\n\nTask: ${prompt}\n\nRemove all existing text and watermarks. Do not add any new text. Keep the main product exactly as is, only change the background.\nMake it look like professional studio product photography for premium e-commerce advertising — soft realistic lighting, natural shadows and reflections, sharp focus, high detail, photorealistic.\n4K.`;
-  return {images,prompt:fixedPrompt};
+  const temperature=0.85+Math.random()*0.15;
+  return {images,prompt:fixedPrompt,temperature};
 }
 
 async function miGenerateSingle(){
