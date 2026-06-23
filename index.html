@@ -230,6 +230,7 @@ select.pi{cursor:pointer}
   </div>
 </div>
 
+<div style="text-align:center;font-size:10px;color:#666;padding:5px 0;background:#111;border-bottom:1px solid #1a1a1a;flex-shrink:0">AI가 만든 결과물이니, 꼭 한 번씩 확인해 주세요 😊</div>
 <div class="tab-bar">
   <button class="tab-btn active" id="tab-editor" onclick="switchTab('editor')">📋 상세페이지 에디터</button>
   <button class="tab-btn" id="tab-main" onclick="switchTab('main')">🖼️ 메인이미지 생성</button>
@@ -303,7 +304,9 @@ select.pi{cursor:pointer}
   <div class="right">
     <div class="sec">
       <div class="stitle">속성</div>
-      <div id="ns" class="ns">요소를 선택하세요</div>
+      <div id="ns" class="ns">요소를 선택하세요
+        <div style="margin-top:8px"><button class="btn ai" style="width:100%;font-size:10px" onclick="removeTextAgain()">✂ 중국어 텍스트 다시 지우기</button></div>
+      </div>
       <div id="props" style="display:none">
         <div id="text-props">
           <div class="pr">
@@ -1041,6 +1044,88 @@ async function transOne(){
     cv.requestRenderAll();updateLayers();toast('번역 완료','ok');
   }catch(e){toast('오류: '+e.message,'err');}
   finally{hideOv();}
+}
+
+async function removeTextAgain(){
+  if(!loaded){toast('이미지를 먼저 업로드하세요','err');return;}
+  // 배경 이미지(가장 아래 selectable:false 레이어) 추출
+  const bgObj=cv.getObjects().find(o=>!o.selectable);
+  if(!bgObj){toast('배경 이미지가 없습니다','err');return;}
+  // 배경 이미지를 별도 캔버스에 그려 base64 추출
+  const tmpC=document.createElement('canvas');
+  tmpC.width=Math.round(bgObj.width*(bgObj.scaleX||1));
+  tmpC.height=Math.round(bgObj.height*(bgObj.scaleY||1));
+  const tmpCtx=tmpC.getContext('2d');
+  tmpCtx.drawImage(bgObj._element||bgObj._originalElement,0,0,tmpC.width,tmpC.height);
+  const bgDataUrl=tmpC.toDataURL('image/png');
+  const base64=bgDataUrl.split(',')[1];
+  const mime='image/png';
+
+  showOv('남은 텍스트 감지 중...');setStatus('재제거 중','spin');
+  let items;
+  try{
+    for(let i=0;i<3;i++){
+      try{items=await callOpenAI(base64,mime);break;}
+      catch(e){
+        if(i===2)throw e;
+        showOv(`재시도 중... (${i+2}/3)`);
+        await new Promise(r=>setTimeout(r,1500));
+      }
+    }
+  }catch(e){
+    hideOv();toast('텍스트 감지 실패: '+e.message,'err');setStatus('오류');return;
+  }
+  if(!items||!items.length){
+    hideOv();toast('남은 텍스트 없음','ok');setStatus('완료','ok');return;
+  }
+
+  async function attemptRemoval(b64,mimeT,remainingItems){
+    const regionDesc=remainingItems.map((item,i)=>`region ${i+1} at approximately ${item.left}% from left, ${item.top}% from top, sized ${item.width}%x${item.height}%`).join('; ');
+    const removePrompt=`Remove every piece of Chinese text in this image completely, regardless of size — including large titles, headlines, body paragraphs, and small captions or labels inside colored badges/diagrams/charts. Do not leave any Chinese characters anywhere. As additional location hints, there are ${remainingItems.length} known text regions: ${regionDesc}. Reconstruct the background naturally in place of removed text. Keep everything else exactly the same. Keep the same image size. Do not add any new text. 4K.`;
+    const res=await fetch(GEMINI_EDIT_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({base64:b64,mimeType:mimeT,prompt:removePrompt})
+    });
+    const data=await res.json();
+    if(!data.base64)throw new Error('결과 이미지 없음');
+    return data;
+  }
+
+  try{
+    showOv('텍스트 제거 중 (1/3)...','남은 중국어 텍스트를 제거하고 있어요 (10~30초)');
+    let data=await attemptRemoval(base64,mime,items);
+    let cleanedMime=data.mimeType||'image/png';
+    let cleanedUrl=`data:${cleanedMime};base64,${data.base64}`;
+
+    for(let attempt=2;attempt<=3;attempt++){
+      showOv('남은 텍스트 재확인 중...','잔여 텍스트 검사 중 (잠깐만요)');
+      let remaining=[];
+      try{remaining=await callOpenAI(data.base64,cleanedMime);}catch(e){remaining=[];}
+      if(!remaining||remaining.length===0)break;
+      if(attempt===3){toast('일부 텍스트가 남아있을 수 있습니다','err');break;}
+      showOv(`텍스트 제거 중 (${attempt}/3)...`,'남은 텍스트를 다시 제거하고 있어요 (10~30초)');
+      try{
+        data=await attemptRemoval(data.base64,cleanedMime,remaining);
+        cleanedMime=data.mimeType||'image/png';
+        cleanedUrl=`data:${cleanedMime};base64,${data.base64}`;
+      }catch(e){toast('일부 텍스트가 남아있을 수 있습니다','err');break;}
+    }
+
+    fabric.Image.fromURL(cleanedUrl,cleanImg=>{
+      const scX=CANVAS_W/cleanImg.width;
+      const scY=cv.getHeight()/cleanImg.height;
+      cleanImg.set({left:0,top:0,scaleX:scX,scaleY:scY,selectable:false,evented:false});
+      const bg=cv.getObjects().find(o=>!o.selectable);
+      if(bg)cv.remove(bg);
+      cv.add(cleanImg);cv.sendToBack(cleanImg);
+      objs.forEach(o=>cv.bringToFront(o));
+      cv.requestRenderAll();saveHistory();
+    },{crossOrigin:'anonymous'});
+    hideOv();toast('텍스트 재제거 완료','ok');setStatus('완료','ok');
+  }catch(e){
+    hideOv();toast('텍스트 제거 실패: '+e.message,'err');setStatus('오류');
+  }
 }
 
 // [FIX 4] makeTextLayer - 5단계 폰트 사이즈 적용, [FIX 6] radius 지원
