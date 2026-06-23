@@ -718,7 +718,7 @@ window.onload=()=>{
     const tag=document.activeElement.tagName;
     const isInput=(tag==='TEXTAREA'||tag==='INPUT');
     if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();doUndo();}
-    if((e.ctrlKey||e.metaKey)&&e.key==='y'){e.preventDefault();doRedo();}
+    if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key.toLowerCase()==='z'))){e.preventDefault();doRedo();}
     // [FIX 8] Ctrl+C 복사
     if((e.ctrlKey||e.metaKey)&&e.key==='c'&&!isInput){
       const s=cv.getActiveObject();
@@ -1623,7 +1623,7 @@ document.addEventListener('keydown',function(e){
   if(isInput)return;
   // Ctrl+Z 되돌리기
   if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();miUndo();return;}
-  if((e.ctrlKey||e.metaKey)&&e.key==='y'){e.preventDefault();miRedo();return;}
+  if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key.toLowerCase()==='z'))){e.preventDefault();miRedo();return;}
   // Del/Backspace 삭제
   if((e.key==='Delete'||e.key==='Backspace')&&miSel2){e.preventDefault();miDelSel();return;}
   // 방향키 이동 (1px, Shift=10px)
