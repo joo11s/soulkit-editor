@@ -935,7 +935,8 @@ async function autoProcess(origW,origH){
   try{
     const base64=origDataUrl.split(',')[1];
     const mimeType=origDataUrl.split(';')[0].split(':')[1];
-    const removePrompt = 'Remove only the Chinese text from this image. Keep everything else exactly the same. Keep the same image size. Do not add any text. 4K.';
+    const regionDesc=items.map((item,i)=>`region ${i+1} at approximately ${item.left}% from left, ${item.top}% from top, sized ${item.width}%x${item.height}%`).join('; ');
+    const removePrompt=`There are ${items.length} text region${items.length>1?'s':''} to remove: ${regionDesc}. Remove ALL Chinese characters and text completely from these regions, including small captions, watermarks, or faint/overlapping text. Reconstruct the background naturally. Keep everything else exactly the same. Keep the same image size. Do not add any new text. 4K.`;
     const geminiRes=await fetch(GEMINI_EDIT_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -943,7 +944,42 @@ async function autoProcess(origW,origH){
     });
     const data=await geminiRes.json();
     if(!data.base64)throw new Error('결과 이미지 없음');
-    const cleanedUrl=`data:${data.mimeType||'image/png'};base64,${data.base64}`;
+    const cleanedMime=data.mimeType||'image/png';
+    let cleanedUrl=`data:${cleanedMime};base64,${data.base64}`;
+
+    // 검증: 1차 제거 후 텍스트 재감지
+    showOv('남은 텍스트 재확인 중...','잔여 텍스트 검사 중 (잠깐만요)');
+    let items2=[];
+    try{
+      items2=await callOpenAI(data.base64,cleanedMime);
+    }catch(e2){
+      items2=[];
+    }
+    if(items2&&items2.length>0){
+      // 2차 제거 시도 (최대 1회 재시도)
+      showOv('텍스트 재제거 중...','남은 텍스트를 다시 제거하고 있어요 (10~30초)');
+      try{
+        const regionDesc2=items2.map((item,i)=>`region ${i+1} at approximately ${item.left}% from left, ${item.top}% from top, sized ${item.width}%x${item.height}%`).join('; ');
+        const removePrompt2=`There are ${items2.length} text region${items2.length>1?'s':''} to remove: ${regionDesc2}. Remove ALL Chinese characters and text completely from these regions, including small captions, watermarks, or faint/overlapping text. Reconstruct the background naturally. Keep everything else exactly the same. Keep the same image size. Do not add any new text. 4K.`;
+        const geminiRes2=await fetch(GEMINI_EDIT_URL,{
+          method:'POST',
+          headers:{'Content-Type':'application/json'},
+          body:JSON.stringify({base64:data.base64,mimeType:cleanedMime,prompt:removePrompt2})
+        });
+        const data2=await geminiRes2.json();
+        if(data2.base64){
+          cleanedUrl=`data:${data2.mimeType||'image/png'};base64,${data2.base64}`;
+          // 2차 후에도 텍스트가 남아있으면 그냥 진행
+          let items3=[];
+          try{items3=await callOpenAI(data2.base64,data2.mimeType||'image/png');}catch(e3){items3=[];}
+          if(items3&&items3.length>0){toast('일부 텍스트가 남아있을 수 있습니다','err');}
+        }
+      }catch(e2){
+        // 2차 실패 시 1차 결과 그대로 사용
+        toast('일부 텍스트가 남아있을 수 있습니다','err');
+      }
+    }
+
     setStep(3,'done');
     fabric.Image.fromURL(cleanedUrl,cleanImg=>{
       const scX=CANVAS_W/cleanImg.width;
