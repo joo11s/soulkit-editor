@@ -931,52 +931,47 @@ async function autoProcess(origW,origH){
   updateLayers();updateInfo();setStep(4,'done');cv.requestRenderAll();
 
   setStep(3,'run','텍스트 제거 중...');
-  showOv('텍스트 제거 중...','Gemini가 배경을 복원하고 있어요 (10~30초)');
   try{
     const base64=origDataUrl.split(',')[1];
     const mimeType=origDataUrl.split(';')[0].split(':')[1];
-    const regionDesc=items.map((item,i)=>`region ${i+1} at approximately ${item.left}% from left, ${item.top}% from top, sized ${item.width}%x${item.height}%`).join('; ');
-    const removePrompt=`There are ${items.length} text region${items.length>1?'s':''} to remove: ${regionDesc}. Remove ALL Chinese characters and text completely from these regions, including small captions, watermarks, or faint/overlapping text. Reconstruct the background naturally. Keep everything else exactly the same. Keep the same image size. Do not add any new text. 4K.`;
-    const geminiRes=await fetch(GEMINI_EDIT_URL,{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({base64,mimeType,prompt:removePrompt})
-    });
-    const data=await geminiRes.json();
-    if(!data.base64)throw new Error('결과 이미지 없음');
-    const cleanedMime=data.mimeType||'image/png';
+
+    async function attemptRemoval(b64,mime,remainingItems){
+      const regionDesc=remainingItems.map((item,i)=>`region ${i+1} at approximately ${item.left}% from left, ${item.top}% from top, sized ${item.width}%x${item.height}%`).join('; ');
+      const removePrompt=`Remove every piece of Chinese text in this image completely, regardless of size — including large titles, headlines, body paragraphs, and small captions or labels inside colored badges/diagrams/charts. Do not leave any Chinese characters anywhere. As additional location hints, there are ${remainingItems.length} known text regions: ${regionDesc}. Reconstruct the background naturally in place of removed text. Keep everything else exactly the same. Keep the same image size. Do not add any new text. 4K.`;
+      const res=await fetch(GEMINI_EDIT_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json'},
+        body:JSON.stringify({base64:b64,mimeType:mime,prompt:removePrompt})
+      });
+      const data=await res.json();
+      if(!data.base64)throw new Error('결과 이미지 없음');
+      return data;
+    }
+
+    // 1차 제거
+    showOv('텍스트 제거 중 (1/3)...','Gemini가 배경을 복원하고 있어요 (10~30초)');
+    let data=await attemptRemoval(base64,mimeType,items);
+    let cleanedMime=data.mimeType||'image/png';
     let cleanedUrl=`data:${cleanedMime};base64,${data.base64}`;
 
-    // 검증: 1차 제거 후 텍스트 재감지
-    showOv('남은 텍스트 재확인 중...','잔여 텍스트 검사 중 (잠깐만요)');
-    let items2=[];
-    try{
-      items2=await callOpenAI(data.base64,cleanedMime);
-    }catch(e2){
-      items2=[];
-    }
-    if(items2&&items2.length>0){
-      // 2차 제거 시도 (최대 1회 재시도)
-      showOv('텍스트 재제거 중...','남은 텍스트를 다시 제거하고 있어요 (10~30초)');
-      try{
-        const regionDesc2=items2.map((item,i)=>`region ${i+1} at approximately ${item.left}% from left, ${item.top}% from top, sized ${item.width}%x${item.height}%`).join('; ');
-        const removePrompt2=`There are ${items2.length} text region${items2.length>1?'s':''} to remove: ${regionDesc2}. Remove ALL Chinese characters and text completely from these regions, including small captions, watermarks, or faint/overlapping text. Reconstruct the background naturally. Keep everything else exactly the same. Keep the same image size. Do not add any new text. 4K.`;
-        const geminiRes2=await fetch(GEMINI_EDIT_URL,{
-          method:'POST',
-          headers:{'Content-Type':'application/json'},
-          body:JSON.stringify({base64:data.base64,mimeType:cleanedMime,prompt:removePrompt2})
-        });
-        const data2=await geminiRes2.json();
-        if(data2.base64){
-          cleanedUrl=`data:${data2.mimeType||'image/png'};base64,${data2.base64}`;
-          // 2차 후에도 텍스트가 남아있으면 그냥 진행
-          let items3=[];
-          try{items3=await callOpenAI(data2.base64,data2.mimeType||'image/png');}catch(e3){items3=[];}
-          if(items3&&items3.length>0){toast('일부 텍스트가 남아있을 수 있습니다','err');}
-        }
-      }catch(e2){
-        // 2차 실패 시 1차 결과 그대로 사용
+    // 최대 2회 추가 재시도 (총 3회)
+    for(let attempt=2;attempt<=3;attempt++){
+      showOv('남은 텍스트 재확인 중...','잔여 텍스트 검사 중 (잠깐만요)');
+      let remaining=[];
+      try{remaining=await callOpenAI(data.base64,cleanedMime);}catch(e){remaining=[];}
+      if(!remaining||remaining.length===0)break;
+      if(attempt===3){
         toast('일부 텍스트가 남아있을 수 있습니다','err');
+        break;
+      }
+      showOv(`텍스트 제거 중 (${attempt}/3)...`,'남은 텍스트를 다시 제거하고 있어요 (10~30초)');
+      try{
+        data=await attemptRemoval(data.base64,cleanedMime,remaining);
+        cleanedMime=data.mimeType||'image/png';
+        cleanedUrl=`data:${cleanedMime};base64,${data.base64}`;
+      }catch(e){
+        toast('일부 텍스트가 남아있을 수 있습니다','err');
+        break;
       }
     }
 
