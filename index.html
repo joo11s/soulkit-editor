@@ -226,6 +226,21 @@ select.pi{cursor:pointer}
 #content-fill-banner.show{display:flex}
 #content-fill-done-btn{display:none;background:#16a34a;color:#fff;font-size:12px;font-weight:bold;padding:4px 14px;border-radius:6px;border:none;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.45);white-space:nowrap;margin-left:8px}
 #content-fill-cancel-btn{display:none;background:rgba(255,255,255,.15);color:#86efac;font-size:12px;font-weight:bold;padding:4px 10px;border-radius:6px;border:1px solid #16a34a;cursor:pointer;white-space:nowrap;margin-left:4px}
+/* 콘텐츠 인식 채우기 - 모드 토글 */
+.cf-mode-btn{background:rgba(255,255,255,.1);border:1px solid #16a34a40;color:#86efac;font-size:11px;padding:3px 9px;border-radius:4px;cursor:pointer;transition:all .15s;font-family:'Noto Sans KR',sans-serif}
+.cf-mode-btn.active{background:#16a34a;color:#fff;border-color:#16a34a}
+/* 콘텐츠 인식 채우기 - 박스 오버레이 */
+#cf-box-overlay{display:none;position:absolute;border:2px dashed #86efac;background:rgba(22,163,74,.15);pointer-events:none;z-index:600;box-sizing:border-box}
+#cf-confirm-wrap{display:none;position:absolute;z-index:701;gap:6px;pointer-events:auto}
+#cf-confirm-wrap.show{display:flex}
+.cf-confirm-btn{padding:4px 12px;border-radius:5px;border:none;cursor:pointer;font-size:12px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,.4)}
+.cf-confirm-btn.cf-run{background:#16a34a;color:#fff}
+.cf-confirm-btn.cf-cancel{background:#374151;color:#d1d5db}
+.cf-resize-handle{position:absolute;width:8px;height:8px;background:#fff;border:1px solid #16a34a;border-radius:1px;z-index:610;pointer-events:auto;box-sizing:border-box}
+.cf-resize-handle.nw{top:-4px;left:-4px;cursor:nw-resize}
+.cf-resize-handle.ne{top:-4px;right:-4px;cursor:ne-resize}
+.cf-resize-handle.sw{bottom:-4px;left:-4px;cursor:sw-resize}
+.cf-resize-handle.se{bottom:-4px;right:-4px;cursor:se-resize}
 /* ===== 모양/크기 컨트롤 패널 ===== */
 #shape-size-ctrl{display:none;position:absolute;top:40px;left:50%;transform:translateX(-50%);background:rgba(15,15,25,.92);border:1px solid #3d2d6e;border-radius:8px;padding:6px 12px;z-index:510;pointer-events:auto;display:none;align-items:center;gap:8px;white-space:nowrap}
 #shape-size-ctrl.show{display:flex}
@@ -336,7 +351,12 @@ select.pi{cursor:pointer}
         <button class="sp-confirm-btn sp-run" onclick="_spConfirmRun()">✅ 실행</button>
         <button class="sp-confirm-btn sp-cancel" onclick="_spConfirmCancel()">✕ 취소</button>
       </div>
-      <div id="content-fill-banner">🪄 지울 영역을 브러시로 칠하세요 | Alt+휠로 브러시 크기 조절 <button id="content-fill-done-btn" onclick="contentAwareFill()">✅ 실행</button><button id="content-fill-cancel-btn" onclick="_cfCancelMask()">✕ 취소</button></div>
+      <div id="content-fill-banner">🪄 콘텐츠 인식 채우기 <button class="cf-mode-btn active" id="cf-mode-brush" onclick="_cfSetMode('brush')">🖌 브러시</button><button class="cf-mode-btn" id="cf-mode-box" onclick="_cfSetMode('box')">⬜ 박스</button><span id="cf-mode-hint" style="margin-left:4px">지울 영역을 브러시로 칠하세요 | Alt+휠로 브러시 크기 조절</span><button id="content-fill-done-btn" onclick="contentAwareFill()">✅ 실행</button><button id="content-fill-cancel-btn" onclick="_cfCancelMask()">✕ 취소</button></div>
+      <div id="cf-box-overlay"></div>
+      <div id="cf-confirm-wrap">
+        <button class="cf-confirm-btn cf-run" onclick="_cffConfirmRun()">✅ 실행</button>
+        <button class="cf-confirm-btn cf-cancel" onclick="_cffConfirmCancel()">✕ 취소</button>
+      </div>
       <div id="shape-size-ctrl">
         <button class="shape-toggle-btn active" id="shape-btn-rect" onclick="_setShape('rect')">⬜ 사각형</button>
         <button class="shape-toggle-btn" id="shape-btn-circle" onclick="_setShape('circle')">⭕ 원형</button>
@@ -1263,8 +1283,18 @@ function toggleContentFillMode(){
     _cfVisCanvas.width=cv.width;_cfVisCanvas.height=cv.height;
     _cfVisCanvas.style.cssText='position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:550';
     wrap.appendChild(_cfVisCanvas);
+    // 브러시 모드로 초기화
+    _cfMode='brush';
+    document.getElementById('cf-mode-brush').classList.add('active');
+    document.getElementById('cf-mode-box').classList.remove('active');
+    document.getElementById('cf-mode-hint').textContent='지울 영역을 브러시로 칠하세요 | Alt+휠로 브러시 크기 조절';
     doneBtn.style.display='block';
     document.getElementById('content-fill-cancel-btn').style.display='block';
+    // 박스 오버레이/확인 버튼을 wrap 안으로 이동
+    const cfBoxOverlay=document.getElementById('cf-box-overlay');
+    const cfConfirmWrap=document.getElementById('cf-confirm-wrap');
+    if(cfBoxOverlay.parentNode!==wrap)wrap.appendChild(cfBoxOverlay);
+    if(cfConfirmWrap.parentNode!==wrap)wrap.appendChild(cfConfirmWrap);
     const canvasEl=cv.upperCanvasEl||document.getElementById('c');
     canvasEl.addEventListener('mousedown',_cfMouseDown);
     canvasEl.addEventListener('mousemove',_cfMouseMove);
@@ -1289,10 +1319,25 @@ function _cfExitMode(){
   _hideShapeCtrl();
   if(_cfVisCanvas&&_cfVisCanvas.parentNode){_cfVisCanvas.parentNode.removeChild(_cfVisCanvas);}
   _cfVisCanvas=null;_cfMaskCanvas=null;
+  // 박스 모드 정리
+  _cffPendingRect=null;
+  _cffMoveState=null;
+  _cffResizeState=null;
+  _cffDrag={active:false,startX:0,startY:0,startSX:0,startSY:0};
+  const cfBoxOverlay=document.getElementById('cf-box-overlay');
+  cfBoxOverlay.style.display='none';
+  cfBoxOverlay.style.pointerEvents='none';
+  cfBoxOverlay.removeEventListener('mousedown',_cffOverlayMoveStart);
+  _cffRemoveResizeHandles();
+  document.getElementById('cf-confirm-wrap').classList.remove('show');
+  _cfMode='brush';
   const canvasEl=cv.upperCanvasEl||document.getElementById('c');
   canvasEl.removeEventListener('mousedown',_cfMouseDown);
   canvasEl.removeEventListener('mousemove',_cfMouseMove);
   canvasEl.removeEventListener('mouseup',_cfMouseUp);
+  canvasEl.removeEventListener('mousedown',_cffMouseDown);
+  canvasEl.removeEventListener('mousemove',_cffMouseMove);
+  canvasEl.removeEventListener('mouseup',_cffMouseUp);
   canvasEl.removeEventListener('wheel',_cfWheel);
 }
 
@@ -1370,6 +1415,330 @@ function _cfWheel(e){
   _cfBrushSize=Math.max(4,Math.min(80,_cfBrushSize-(e.deltaY>0?2:-2)));
   _shapeSize=_cfBrushSize;
   _syncShapeCtrl();
+}
+
+// ── 콘텐츠 인식 채우기 - 박스 모드 ──
+let _cfMode='brush'; // 'brush' | 'box'
+let _cffDrag={active:false,startX:0,startY:0,startSX:0,startSY:0};
+let _cffPendingRect=null; // {rawL,rawT,rawW,rawH,shapeMode}
+let _cffMoveState=null;
+let _cffResizeState=null;
+
+function _cfSetMode(mode){
+  if(!contentFillMode)return;
+  _cfMode=mode;
+  const brushBtn=document.getElementById('cf-mode-brush');
+  const boxBtn=document.getElementById('cf-mode-box');
+  const hint=document.getElementById('cf-mode-hint');
+  const doneBtn=document.getElementById('content-fill-done-btn');
+  const cancelBtn=document.getElementById('content-fill-cancel-btn');
+  const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+
+  if(mode==='brush'){
+    brushBtn.classList.add('active');
+    boxBtn.classList.remove('active');
+    hint.textContent='지울 영역을 브러시로 칠하세요 | Alt+휠로 브러시 크기 조절';
+    doneBtn.style.display='block';
+    cancelBtn.style.display='block';
+    // Remove box listeners, add brush listeners
+    canvasEl.removeEventListener('mousedown',_cffMouseDown);
+    canvasEl.removeEventListener('mousemove',_cffMouseMove);
+    canvasEl.removeEventListener('mouseup',_cffMouseUp);
+    canvasEl.addEventListener('mousedown',_cfMouseDown);
+    canvasEl.addEventListener('mousemove',_cfMouseMove);
+    canvasEl.addEventListener('mouseup',_cfMouseUp);
+    // Clear any pending box
+    _cffClearBox();
+  } else {
+    boxBtn.classList.add('active');
+    brushBtn.classList.remove('active');
+    hint.textContent='지울 영역을 박스로 드래그하세요';
+    doneBtn.style.display='none';
+    cancelBtn.style.display='none';
+    // Remove brush listeners, add box listeners
+    canvasEl.removeEventListener('mousedown',_cfMouseDown);
+    canvasEl.removeEventListener('mousemove',_cfMouseMove);
+    canvasEl.removeEventListener('mouseup',_cfMouseUp);
+    canvasEl.addEventListener('mousedown',_cffMouseDown);
+    canvasEl.addEventListener('mousemove',_cffMouseMove);
+    canvasEl.addEventListener('mouseup',_cffMouseUp);
+    // Clear any existing brush mask visual
+    if(_cfVisCanvas){const vCtx=_cfVisCanvas.getContext('2d');vCtx.clearRect(0,0,_cfVisCanvas.width,_cfVisCanvas.height);}
+  }
+}
+
+function _cffGetCanvasPos(e){
+  const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+  const canvasRect=canvasEl.getBoundingClientRect();
+  const scaleX=cv.width/(canvasRect.width);
+  const scaleY=cv.height/(canvasRect.height);
+  const wrapEl=document.getElementById('wrap');
+  const wrapRect=wrapEl.getBoundingClientRect();
+  return{
+    x:(e.clientX-canvasRect.left)*scaleX,
+    y:(e.clientY-canvasRect.top)*scaleY,
+    sx:(e.clientX-wrapRect.left)/zoom,
+    sy:(e.clientY-wrapRect.top)/zoom,
+  };
+}
+
+function _cffMouseDown(e){
+  if(!contentFillMode||_cfMode!=='box')return;
+  // If clicking inside pending box, let move handler take over
+  const overlay=document.getElementById('cf-box-overlay');
+  if(_cffPendingRect&&overlay.style.pointerEvents==='auto')return;
+  const pos=_cffGetCanvasPos(e);
+  _cffDrag={active:true,startX:pos.x,startY:pos.y,startSX:pos.sx,startSY:pos.sy};
+  overlay.style.display='block';
+  overlay.style.left=pos.sx+'px';
+  overlay.style.top=pos.sy+'px';
+  overlay.style.width='0px';
+  overlay.style.height='0px';
+  overlay.style.borderRadius=_shapeType==='circle'?'50%':'0';
+}
+
+function _cffMouseMove(e){
+  if(!contentFillMode||_cfMode!=='box'||!_cffDrag.active)return;
+  const pos=_cffGetCanvasPos(e);
+  const x=Math.min(pos.sx,_cffDrag.startSX);
+  const y=Math.min(pos.sy,_cffDrag.startSY);
+  const w=Math.abs(pos.sx-_cffDrag.startSX);
+  const h=Math.abs(pos.sy-_cffDrag.startSY);
+  const overlay=document.getElementById('cf-box-overlay');
+  overlay.style.left=x+'px';
+  overlay.style.top=y+'px';
+  overlay.style.width=w+'px';
+  overlay.style.height=h+'px';
+  overlay.style.borderRadius=_shapeType==='circle'?'50%':'0';
+}
+
+function _cffMouseUp(e){
+  if(!contentFillMode||_cfMode!=='box'||!_cffDrag.active)return;
+  _cffDrag.active=false;
+  const pos=_cffGetCanvasPos(e);
+  const rawL=Math.min(pos.x,_cffDrag.startX);
+  const rawT=Math.min(pos.y,_cffDrag.startY);
+  const rawW=Math.abs(pos.x-_cffDrag.startX);
+  const rawH=Math.abs(pos.y-_cffDrag.startY);
+  const overlay=document.getElementById('cf-box-overlay');
+  if(rawW<10||rawH<10){overlay.style.display='none';return;}
+  _cffPendingRect={rawL,rawT,rawW,rawH,shapeMode:_shapeType};
+  _cffShowConfirmBtns();
+}
+
+function _cffShowConfirmBtns(){
+  const overlay=document.getElementById('cf-box-overlay');
+  const wrap=document.getElementById('cf-confirm-wrap');
+  const oLeft=parseFloat(overlay.style.left)||0;
+  const oTop=parseFloat(overlay.style.top)||0;
+  const oH=parseFloat(overlay.style.height)||0;
+  wrap.style.left=oLeft+'px';
+  wrap.style.top=(oTop+oH+6)+'px';
+  wrap.classList.add('show');
+  overlay.style.pointerEvents='auto';
+  overlay.addEventListener('mousedown',_cffOverlayMoveStart);
+  _cffUpdateResizeHandles();
+}
+
+function _cffHideConfirmBtns(){
+  const wrap=document.getElementById('cf-confirm-wrap');
+  wrap.classList.remove('show');
+  const overlay=document.getElementById('cf-box-overlay');
+  overlay.style.pointerEvents='none';
+  overlay.removeEventListener('mousedown',_cffOverlayMoveStart);
+  _cffRemoveResizeHandles();
+}
+
+function _cffClearBox(){
+  _cffPendingRect=null;
+  _cffHideConfirmBtns();
+  const overlay=document.getElementById('cf-box-overlay');
+  overlay.style.display='none';
+}
+
+function _cffConfirmRun(){
+  if(!_cffPendingRect)return;
+  const {rawL,rawT,rawW,rawH,shapeMode}=_cffPendingRect;
+  _cffPendingRect=null;
+  _cffHideConfirmBtns();
+  document.getElementById('cf-box-overlay').style.display='none';
+  // Build mask on _cfMaskCanvas from box region
+  if(!_cfMaskCanvas){toast('마스크 캔버스가 없습니다','err');return;}
+  const bgObj=cv.getObjects().find(o=>!o.selectable);
+  if(!bgObj){toast('배경 이미지가 없습니다','err');return;}
+  const srcEl=bgObj._element||bgObj._originalElement;
+  const bgNatW=srcEl.naturalWidth||srcEl.width;
+  const bgNatH=srcEl.naturalHeight||srcEl.height;
+  const bgRendW=bgObj.width*(bgObj.scaleX||1);
+  const bgRendH=bgObj.height*(bgObj.scaleY||1);
+  const rx=bgNatW/bgRendW, ry=bgNatH/bgRendH;
+  const maskCtx=_cfMaskCanvas.getContext('2d');
+  maskCtx.fillStyle='#ffffff';
+  if(shapeMode==='circle'){
+    maskCtx.beginPath();
+    maskCtx.ellipse((rawL+rawW/2)*rx,(rawT+rawH/2)*ry,(rawW/2)*rx,(rawH/2)*ry,0,0,Math.PI*2);
+    maskCtx.fill();
+  }else{
+    maskCtx.fillRect(rawL*rx,rawT*ry,rawW*rx,rawH*ry);
+  }
+  // Also draw visual feedback on _cfVisCanvas
+  if(_cfVisCanvas){
+    const visCtx=_cfVisCanvas.getContext('2d');
+    visCtx.fillStyle='rgba(220,40,40,0.58)';
+    if(shapeMode==='circle'){
+      visCtx.beginPath();
+      visCtx.ellipse(rawL+rawW/2,rawT+rawH/2,rawW/2,rawH/2,0,0,Math.PI*2);
+      visCtx.fill();
+    }else{
+      visCtx.fillRect(rawL,rawT,rawW,rawH);
+    }
+  }
+  // Switch back to brush mode UI state so contentAwareFill() works normally
+  _cfMode='brush';
+  document.getElementById('content-fill-done-btn').style.display='block';
+  document.getElementById('content-fill-cancel-btn').style.display='block';
+  document.getElementById('cf-mode-brush').classList.add('active');
+  document.getElementById('cf-mode-box').classList.remove('active');
+  document.getElementById('cf-mode-hint').textContent='지울 영역을 브러시로 칠하세요 | Alt+휠로 브러시 크기 조절';
+  // Ensure brush listeners active
+  const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+  canvasEl.removeEventListener('mousedown',_cffMouseDown);
+  canvasEl.removeEventListener('mousemove',_cffMouseMove);
+  canvasEl.removeEventListener('mouseup',_cffMouseUp);
+  canvasEl.addEventListener('mousedown',_cfMouseDown);
+  canvasEl.addEventListener('mousemove',_cfMouseMove);
+  canvasEl.addEventListener('mouseup',_cfMouseUp);
+  // Call contentAwareFill
+  contentAwareFill();
+}
+
+function _cffConfirmCancel(){
+  _cffClearBox();
+  // Keep box mode active so user can draw again
+}
+
+function _cffOverlayMoveStart(e){
+  if(!_cffPendingRect)return;
+  e.preventDefault();e.stopPropagation();
+  const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+  const rect=canvasEl.getBoundingClientRect();
+  const scaleX=cv.width/rect.width;
+  const scaleY=cv.height/rect.height;
+  const overlay=document.getElementById('cf-box-overlay');
+  _cffMoveState={
+    startClientX:e.clientX,startClientY:e.clientY,
+    startRawL:_cffPendingRect.rawL,startRawT:_cffPendingRect.rawT,
+    startSx:parseFloat(overlay.style.left)||0,startSy:parseFloat(overlay.style.top)||0,
+    scaleX,scaleY
+  };
+  document.addEventListener('mousemove',_cffOverlayMoving);
+  document.addEventListener('mouseup',_cffOverlayMoveEnd);
+}
+
+function _cffOverlayMoving(e){
+  if(!_cffMoveState||!_cffPendingRect)return;
+  const dx=e.clientX-_cffMoveState.startClientX;
+  const dy=e.clientY-_cffMoveState.startClientY;
+  const overlay=document.getElementById('cf-box-overlay');
+  const newSx=_cffMoveState.startSx+dx/zoom;
+  const newSy=_cffMoveState.startSy+dy/zoom;
+  overlay.style.left=newSx+'px';
+  overlay.style.top=newSy+'px';
+  const wrap=document.getElementById('cf-confirm-wrap');
+  wrap.style.left=newSx+'px';
+  wrap.style.top=(newSy+(parseFloat(overlay.style.height)||0)+6)+'px';
+  _cffPendingRect.rawL=_cffMoveState.startRawL+dx*_cffMoveState.scaleX;
+  _cffPendingRect.rawT=_cffMoveState.startRawT+dy*_cffMoveState.scaleY;
+}
+
+function _cffOverlayMoveEnd(e){
+  if(!_cffMoveState)return;
+  _cffMoveState=null;
+  document.removeEventListener('mousemove',_cffOverlayMoving);
+  document.removeEventListener('mouseup',_cffOverlayMoveEnd);
+}
+
+function _cffUpdateResizeHandles(){
+  const overlay=document.getElementById('cf-box-overlay');
+  const corners=['nw','ne','sw','se'];
+  corners.forEach(c=>{
+    if(!overlay.querySelector('.cf-resize-handle.'+c)){
+      const h=document.createElement('div');
+      h.className='cf-resize-handle '+c;
+      h.addEventListener('mousedown',function(e){_cffResizeHandleDown(c,e);});
+      overlay.appendChild(h);
+    }
+  });
+}
+
+function _cffRemoveResizeHandles(){
+  const overlay=document.getElementById('cf-box-overlay');
+  overlay.querySelectorAll('.cf-resize-handle').forEach(h=>h.remove());
+}
+
+function _cffResizeHandleDown(corner,e){
+  if(!_cffPendingRect)return;
+  e.preventDefault();e.stopPropagation();
+  const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+  const rect=canvasEl.getBoundingClientRect();
+  const scaleX=cv.width/rect.width;
+  const scaleY=cv.height/rect.height;
+  const overlay=document.getElementById('cf-box-overlay');
+  _cffResizeState={
+    corner,
+    startClientX:e.clientX,startClientY:e.clientY,
+    startSx:parseFloat(overlay.style.left)||0,startSy:parseFloat(overlay.style.top)||0,
+    startSw:parseFloat(overlay.style.width)||0,startSh:parseFloat(overlay.style.height)||0,
+    startRawL:_cffPendingRect.rawL,startRawT:_cffPendingRect.rawT,
+    startRawW:_cffPendingRect.rawW,startRawH:_cffPendingRect.rawH,
+    scaleX,scaleY
+  };
+  document.addEventListener('mousemove',_cffResizeHandleMoving);
+  document.addEventListener('mouseup',_cffResizeHandleEnd);
+}
+
+function _cffResizeHandleMoving(e){
+  if(!_cffResizeState||!_cffPendingRect)return;
+  const{corner,startClientX,startClientY,startSx,startSy,startSw,startSh,startRawL,startRawT,startRawW,startRawH,scaleX,scaleY}=_cffResizeState;
+  const dx=e.clientX-startClientX;
+  const dy=e.clientY-startClientY;
+  const dxL=dx/zoom,dyL=dy/zoom;
+  let newSx=startSx,newSy=startSy,newSw=startSw,newSh=startSh;
+  if(corner==='nw'){newSx=startSx+dxL;newSy=startSy+dyL;newSw=startSw-dxL;newSh=startSh-dyL;}
+  else if(corner==='ne'){newSy=startSy+dyL;newSw=startSw+dxL;newSh=startSh-dyL;}
+  else if(corner==='sw'){newSx=startSx+dxL;newSw=startSw-dxL;newSh=startSh+dyL;}
+  else{newSw=startSw+dxL;newSh=startSh+dyL;}
+  if(newSw<10){if(corner==='nw'||corner==='sw')newSx=startSx+startSw-10;newSw=10;}
+  if(newSh<10){if(corner==='nw'||corner==='ne')newSy=startSy+startSh-10;newSh=10;}
+  const overlay=document.getElementById('cf-box-overlay');
+  overlay.style.left=newSx+'px';overlay.style.top=newSy+'px';
+  overlay.style.width=newSw+'px';overlay.style.height=newSh+'px';
+  const wrap=document.getElementById('cf-confirm-wrap');
+  wrap.style.left=newSx+'px';wrap.style.top=(newSy+newSh+6)+'px';
+  if(corner==='nw'){
+    _cffPendingRect.rawL=startRawL+dx*scaleX;_cffPendingRect.rawT=startRawT+dy*scaleY;
+    _cffPendingRect.rawW=Math.max(10,startRawW-dx*scaleX);_cffPendingRect.rawH=Math.max(10,startRawH-dy*scaleY);
+  }else if(corner==='ne'){
+    _cffPendingRect.rawT=startRawT+dy*scaleY;
+    _cffPendingRect.rawW=Math.max(10,startRawW+dx*scaleX);_cffPendingRect.rawH=Math.max(10,startRawH-dy*scaleY);
+  }else if(corner==='sw'){
+    _cffPendingRect.rawL=startRawL+dx*scaleX;
+    _cffPendingRect.rawW=Math.max(10,startRawW-dx*scaleX);_cffPendingRect.rawH=Math.max(10,startRawH+dy*scaleY);
+  }else{
+    _cffPendingRect.rawW=Math.max(10,startRawW+dx*scaleX);_cffPendingRect.rawH=Math.max(10,startRawH+dy*scaleY);
+  }
+  const cW=cv.width,cH=cv.height;
+  _cffPendingRect.rawL=Math.max(0,Math.min(cW-_cffPendingRect.rawW,_cffPendingRect.rawL));
+  _cffPendingRect.rawT=Math.max(0,Math.min(cH-_cffPendingRect.rawH,_cffPendingRect.rawT));
+  _cffPendingRect.rawW=Math.min(_cffPendingRect.rawW,cW-_cffPendingRect.rawL);
+  _cffPendingRect.rawH=Math.min(_cffPendingRect.rawH,cH-_cffPendingRect.rawT);
+}
+
+function _cffResizeHandleEnd(e){
+  if(!_cffResizeState)return;
+  _cffResizeState=null;
+  document.removeEventListener('mousemove',_cffResizeHandleMoving);
+  document.removeEventListener('mouseup',_cffResizeHandleEnd);
 }
 
 async function contentAwareFill(){
