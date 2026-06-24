@@ -217,9 +217,10 @@ select.pi{cursor:pointer}
 .sp-confirm-btn.sp-cancel{background:#374151;color:#d1d5db}
 /* ===== 콘텐츠 인식 채우기 ===== */
 .content-fill-btn.active{background:#14532d!important;color:#86efac!important;border-color:#16a34a!important}
-#content-fill-banner{display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(14,52,20,.92);border:1px solid #16a34a;color:#86efac;font-size:11px;padding:5px 14px;border-radius:6px;z-index:501;pointer-events:none;white-space:nowrap;letter-spacing:.3px}
-#content-fill-banner.show{display:block}
-#content-fill-done-btn{display:none;position:absolute;bottom:40px;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;font-size:12px;font-weight:bold;padding:6px 20px;border-radius:8px;border:none;cursor:pointer;z-index:700;box-shadow:0 2px 8px rgba(0,0,0,.45);white-space:nowrap}
+#content-fill-banner{display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(14,52,20,.92);border:1px solid #16a34a;color:#86efac;font-size:11px;padding:5px 14px;border-radius:6px;z-index:501;pointer-events:auto;white-space:nowrap;letter-spacing:.3px;align-items:center;gap:8px}
+#content-fill-banner.show{display:flex}
+#content-fill-done-btn{display:none;background:#16a34a;color:#fff;font-size:12px;font-weight:bold;padding:4px 14px;border-radius:6px;border:none;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.45);white-space:nowrap;margin-left:8px}
+#content-fill-cancel-btn{display:none;background:rgba(255,255,255,.15);color:#86efac;font-size:12px;font-weight:bold;padding:4px 10px;border-radius:6px;border:1px solid #16a34a;cursor:pointer;white-space:nowrap;margin-left:4px}
 /* ===== 모양/크기 컨트롤 패널 ===== */
 #shape-size-ctrl{display:none;position:absolute;top:40px;left:50%;transform:translateX(-50%);background:rgba(15,15,25,.92);border:1px solid #3d2d6e;border-radius:8px;padding:6px 12px;z-index:510;pointer-events:auto;display:none;align-items:center;gap:8px;white-space:nowrap}
 #shape-size-ctrl.show{display:flex}
@@ -330,9 +331,7 @@ select.pi{cursor:pointer}
         <button class="sp-confirm-btn sp-run" onclick="_spConfirmRun()">✅ 실행</button>
         <button class="sp-confirm-btn sp-cancel" onclick="_spConfirmCancel()">✕ 취소</button>
       </div>
-      <div id="content-fill-banner">🪄 지울 영역을 브러시로 칠하세요 (완료 버튼 클릭) | Alt+휠로 브러시 크기 조절</div>
-      <button id="content-fill-done-btn" onclick="contentAwareFill()">✅ 실행</button>
-      <button id="content-fill-cancel-btn" onclick="_cfCancelMask()" style="display:none">✕ 취소</button>
+      <div id="content-fill-banner">🪄 지울 영역을 브러시로 칠하세요 | Alt+휠로 브러시 크기 조절 <button id="content-fill-done-btn" onclick="contentAwareFill()">✅ 실행</button><button id="content-fill-cancel-btn" onclick="_cfCancelMask()">✕ 취소</button></div>
       <div id="shape-size-ctrl">
         <button class="shape-toggle-btn active" id="shape-btn-rect" onclick="_setShape('rect')">⬜ 사각형</button>
         <button class="shape-toggle-btn" id="shape-btn-circle" onclick="_setShape('circle')">⭕ 원형</button>
@@ -1205,17 +1204,28 @@ let _cfBrushSize=14;
 let _cfMaskCanvas=null;
 let _cfVisCanvas=null;
 let _cfDrawing=false;
+let _cfLastX=0,_cfLastY=0;
 
 function loadOpenCV(cb){
-  if(window.cv&&window.cv.Mat){if(cb)cb();return;}
+  if(window._ocv&&window._ocv.Mat){if(cb)cb();return;}
   if(document.getElementById('opencv-script')){
-    const chk=setInterval(()=>{if(window.cv&&window.cv.Mat){clearInterval(chk);if(cb)cb();}},200);
+    const chk=setInterval(()=>{if(window._ocv&&window._ocv.Mat){clearInterval(chk);if(cb)cb();}},200);
     return;
   }
+  const fabricCanvas=window.cv; // save fabric.Canvas reference before OpenCV overwrites it
   const s=document.createElement('script');
   s.id='opencv-script';
   s.src='https://docs.opencv.org/4.9.0/opencv.js';
-  s.onload=()=>{const chk=setInterval(()=>{if(window.cv&&window.cv.Mat){clearInterval(chk);if(cb)cb();}},200);};
+  s.onload=()=>{
+    const chk=setInterval(()=>{
+      if(window.cv&&window.cv.Mat){
+        clearInterval(chk);
+        window._ocv=window.cv;   // save OpenCV module
+        window.cv=fabricCanvas;  // restore fabric canvas
+        if(cb)cb();
+      }
+    },200);
+  };
   document.head.appendChild(s);
 }
 
@@ -1295,7 +1305,7 @@ function _cfDrawBrush(x,y){
   const half=_cfBrushSize/2;
   // 시각 피드백
   const visCtx=_cfVisCanvas.getContext('2d');
-  visCtx.fillStyle='rgba(220,40,40,0.45)';
+  visCtx.fillStyle='rgba(220,40,40,0.58)';
   if(_shapeType==='rect'){
     visCtx.fillRect(x-half,y-half,_cfBrushSize,_cfBrushSize);
   }else{
@@ -1323,8 +1333,20 @@ function _cfDrawBrush(x,y){
   }
 }
 
-function _cfMouseDown(e){if(!contentFillMode)return;_cfDrawing=true;const p=_cfGetCanvasPos(e);_cfDrawBrush(p.x,p.y);}
-function _cfMouseMove(e){if(!contentFillMode||!_cfDrawing)return;const p=_cfGetCanvasPos(e);_cfDrawBrush(p.x,p.y);}
+function _cfMouseDown(e){if(!contentFillMode)return;_cfDrawing=true;const p=_cfGetCanvasPos(e);_cfLastX=p.x;_cfLastY=p.y;_cfDrawBrush(p.x,p.y);}
+function _cfMouseMove(e){
+  if(!contentFillMode||!_cfDrawing)return;
+  const p=_cfGetCanvasPos(e);
+  const x=p.x,y=p.y;
+  const dx=x-_cfLastX,dy=y-_cfLastY;
+  const dist=Math.sqrt(dx*dx+dy*dy);
+  const step=Math.max(1,_cfBrushSize/2);
+  for(let i=0;i<=dist;i+=step){
+    const t=dist===0?0:i/dist;
+    _cfDrawBrush(_cfLastX+dx*t,_cfLastY+dy*t);
+  }
+  _cfLastX=x;_cfLastY=y;
+}
 function _cfMouseUp(){if(!contentFillMode)return;_cfDrawing=false;}
 function _cfCancelMask(){
   if(!_cfMaskCanvas||!_cfVisCanvas)return;
@@ -1372,16 +1394,16 @@ async function contentAwareFill(){
       srcCanvas.width=bgNatW;srcCanvas.height=bgNatH;
       srcCanvas.getContext('2d').drawImage(srcEl,0,0,bgNatW,bgNatH);
       // OpenCV Mat 생성 및 inpaint
-      const src=cv.imread(srcCanvas);
-      const maskMat=cv.imread(_cfMaskCanvas);
-      const dst=new cv.Mat();
-      const maskGray=new cv.Mat();
-      cv.cvtColor(maskMat,maskGray,cv.COLOR_RGBA2GRAY);
-      cv.inpaint(src,maskGray,dst,3,cv.INPAINT_TELEA);
+      const src=_ocv.imread(srcCanvas);
+      const maskMat=_ocv.imread(_cfMaskCanvas);
+      const dst=new _ocv.Mat();
+      const maskGray=new _ocv.Mat();
+      _ocv.cvtColor(maskMat,maskGray,_ocv.COLOR_RGBA2GRAY);
+      _ocv.inpaint(src,maskGray,dst,3,_ocv.INPAINT_TELEA);
       // 결과를 캔버스에 출력
       const resultCanvas=document.createElement('canvas');
       resultCanvas.width=bgNatW;resultCanvas.height=bgNatH;
-      cv.imshow(resultCanvas,dst);
+      _ocv.imshow(resultCanvas,dst);
       src.delete();maskMat.delete();dst.delete();maskGray.delete();
       const resultUrl=resultCanvas.toDataURL('image/png');
       fabric.Image.fromURL(resultUrl,cleanImg=>{
