@@ -196,6 +196,11 @@ select.pi{cursor:pointer}
 #spot-erase-banner{display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(61,45,110,.92);border:1px solid #7c3aed;color:#c4b5fd;font-size:11px;padding:5px 14px;border-radius:6px;z-index:500;pointer-events:none;white-space:nowrap;letter-spacing:.3px}
 #spot-erase-banner.show{display:block}
 #spot-drag-overlay{display:none;position:absolute;border:2px dashed #a78bfa;background:rgba(139,92,246,.15);pointer-events:none;z-index:600;box-sizing:border-box}
+/* ===== 콘텐츠 인식 채우기 ===== */
+.content-fill-btn.active{background:#14532d!important;color:#86efac!important;border-color:#16a34a!important}
+#content-fill-banner{display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(14,52,20,.92);border:1px solid #16a34a;color:#86efac;font-size:11px;padding:5px 14px;border-radius:6px;z-index:501;pointer-events:none;white-space:nowrap;letter-spacing:.3px}
+#content-fill-banner.show{display:block}
+#content-fill-done-btn{display:none;position:absolute;bottom:40px;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;font-size:12px;font-weight:bold;padding:6px 20px;border-radius:8px;border:none;cursor:pointer;z-index:700;box-shadow:0 2px 8px rgba(0,0,0,.45);white-space:nowrap}
 
 </style>
 </head>
@@ -292,6 +297,8 @@ select.pi{cursor:pointer}
       <canvas id="c"></canvas>
       <div id="spot-erase-banner">🎯 지울 영역을 드래그로 선택하세요</div>
       <div id="spot-drag-overlay"></div>
+      <div id="content-fill-banner">🪄 지울 영역을 브러시로 칠하세요 (완료 버튼 클릭) | Alt+휠로 브러시 크기 조절</div>
+      <button id="content-fill-done-btn" onclick="contentAwareFill()">✔ 채우기 완료</button>
       <div class="ov" id="ov">
         <div class="pix-office">
           <div class="pix-char-wrap">
@@ -312,7 +319,8 @@ select.pi{cursor:pointer}
     <div class="sec">
       <div class="stitle">속성</div>
       <div id="ns" class="ns">요소를 선택하세요
-        <div style="margin-top:8px"><button id="spotEraseBtn" class="btn ai spot-erase-btn" style="width:100%;font-size:10px" onclick="toggleSpotEraseMode()">🎯 영역 지정 지우기</button></div>
+        <div style="margin-top:8px"><button id="contentFillBtn" class="btn ai content-fill-btn" style="width:100%;font-size:10px" onclick="toggleContentFillMode()">🪄 콘텐츠 인식 채우기</button></div>
+        <div style="margin-top:4px"><button id="spotEraseBtn" class="btn ai spot-erase-btn" style="width:100%;font-size:10px" onclick="toggleSpotEraseMode()">🎯 영역 지정 지우기</button></div>
         <div style="margin-top:4px"><button class="btn ai" style="width:100%;font-size:10px" onclick="removeTextAgain()">✂ 중국어 텍스트 다시 지우기</button></div>
       </div>
       <div id="props" style="display:none">
@@ -980,32 +988,11 @@ async function autoProcess(origW,origH){
       return data;
     }
 
-    // 1차 제거
-    showOv('텍스트 제거 중 (1/3)...','Gemini가 배경을 복원하고 있어요 (10~30초)');
+    // 1회 제거
+    showOv('텍스트 제거 중...','Gemini가 배경을 복원하고 있어요 (10~30초)');
     let data=await attemptRemoval(base64,mimeType,items);
     let cleanedMime=data.mimeType||'image/png';
     let cleanedUrl=`data:${cleanedMime};base64,${data.base64}`;
-
-    // 최대 2회 추가 재시도 (총 3회)
-    for(let attempt=2;attempt<=3;attempt++){
-      showOv('남은 텍스트 재확인 중...','잔여 텍스트 검사 중 (잠깐만요)');
-      let remaining=[];
-      try{remaining=await callOpenAI(data.base64,cleanedMime);}catch(e){remaining=[];}
-      if(!remaining||remaining.length===0)break;
-      if(attempt===3){
-        toast('일부 텍스트가 남아있을 수 있습니다','err');
-        break;
-      }
-      showOv(`텍스트 제거 중 (${attempt}/3)...`,'남은 텍스트를 다시 제거하고 있어요 (10~30초)');
-      try{
-        data=await attemptRemoval(data.base64,cleanedMime,remaining);
-        cleanedMime=data.mimeType||'image/png';
-        cleanedUrl=`data:${cleanedMime};base64,${data.base64}`;
-      }catch(e){
-        toast('일부 텍스트가 남아있을 수 있습니다','err');
-        break;
-      }
-    }
 
     setStep(3,'done');
     fabric.Image.fromURL(cleanedUrl,cleanImg=>{
@@ -1022,7 +1009,7 @@ async function autoProcess(origW,origH){
     setStep(3,'err','제거 실패: '+e.message);
     toast('텍스트 제거 실패 (번역은 완료됨)','err');
   }
-  hideOv();toast('완료!','ok');setStatus('완료','ok');saveHistory();
+  hideOv();toast('1차 제거 완료 — 남은 텍스트가 있으면 아래 도구로 보정하세요','ok');setStatus('완료','ok');saveHistory();
 }
 
 async function uploadR2(dataUrl,filename,mimeType){
@@ -1134,6 +1121,184 @@ async function removeTextAgain(){
   }catch(e){
     hideOv();toast('텍스트 제거 실패: '+e.message,'err');setStatus('오류');
   }
+}
+
+// ── 콘텐츠 인식 채우기 (OpenCV.js inpaint) ──
+let contentFillMode=false;
+let _cfBrushSize=14;
+let _cfMaskCanvas=null;
+let _cfVisCanvas=null;
+let _cfDrawing=false;
+
+function loadOpenCV(cb){
+  if(window.cv&&window.cv.Mat){if(cb)cb();return;}
+  if(document.getElementById('opencv-script')){
+    const chk=setInterval(()=>{if(window.cv&&window.cv.Mat){clearInterval(chk);if(cb)cb();}},200);
+    return;
+  }
+  const s=document.createElement('script');
+  s.id='opencv-script';
+  s.src='https://docs.opencv.org/4.9.0/opencv.js';
+  s.onload=()=>{const chk=setInterval(()=>{if(window.cv&&window.cv.Mat){clearInterval(chk);if(cb)cb();}},200);};
+  document.head.appendChild(s);
+}
+
+function toggleContentFillMode(){
+  if(!loaded){toast('이미지를 먼저 업로드하세요','err');return;}
+  contentFillMode=!contentFillMode;
+  const btn=document.getElementById('contentFillBtn');
+  const banner=document.getElementById('content-fill-banner');
+  const doneBtn=document.getElementById('content-fill-done-btn');
+  if(contentFillMode){
+    btn.classList.add('active');
+    banner.classList.add('show');
+    cv.selection=false;
+    cv.discardActiveObject();cv.requestRenderAll();
+    const bgObj=cv.getObjects().find(o=>!o.selectable);
+    if(!bgObj){toast('배경 이미지가 없습니다','err');contentFillMode=false;btn.classList.remove('active');banner.classList.remove('show');return;}
+    // 마스크 캔버스 (배경 이미지 원본 크기)
+    const srcEl=bgObj._element||bgObj._originalElement;
+    const bgNatW=srcEl.naturalWidth||srcEl.width;
+    const bgNatH=srcEl.naturalHeight||srcEl.height;
+    _cfMaskCanvas=document.createElement('canvas');
+    _cfMaskCanvas.width=bgNatW;_cfMaskCanvas.height=bgNatH;
+    const maskCtx=_cfMaskCanvas.getContext('2d');
+    maskCtx.fillStyle='#000000';maskCtx.fillRect(0,0,bgNatW,bgNatH);
+    // 시각 피드백 캔버스 (캔버스 표시 크기)
+    const wrap=document.getElementById('wrap');
+    _cfVisCanvas=document.createElement('canvas');
+    _cfVisCanvas.width=cv.width;_cfVisCanvas.height=cv.height;
+    _cfVisCanvas.style.cssText='position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:550';
+    wrap.appendChild(_cfVisCanvas);
+    doneBtn.style.display='block';
+    const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+    canvasEl.addEventListener('mousedown',_cfMouseDown);
+    canvasEl.addEventListener('mousemove',_cfMouseMove);
+    canvasEl.addEventListener('mouseup',_cfMouseUp);
+    canvasEl.addEventListener('wheel',_cfWheel,{passive:false});
+  } else {
+    _cfExitMode();
+  }
+}
+
+function _cfExitMode(){
+  contentFillMode=false;_cfDrawing=false;
+  const btn=document.getElementById('contentFillBtn');
+  const banner=document.getElementById('content-fill-banner');
+  const doneBtn=document.getElementById('content-fill-done-btn');
+  btn.classList.remove('active');
+  banner.classList.remove('show');
+  doneBtn.style.display='none';
+  cv.selection=true;
+  if(_cfVisCanvas&&_cfVisCanvas.parentNode){_cfVisCanvas.parentNode.removeChild(_cfVisCanvas);}
+  _cfVisCanvas=null;_cfMaskCanvas=null;
+  const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+  canvasEl.removeEventListener('mousedown',_cfMouseDown);
+  canvasEl.removeEventListener('mousemove',_cfMouseMove);
+  canvasEl.removeEventListener('mouseup',_cfMouseUp);
+  canvasEl.removeEventListener('wheel',_cfWheel);
+}
+
+function _cfGetCanvasPos(e){
+  const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+  const rect=canvasEl.getBoundingClientRect();
+  return{
+    x:(e.clientX-rect.left)*(cv.width/rect.width),
+    y:(e.clientY-rect.top)*(cv.height/rect.height)
+  };
+}
+
+function _cfDrawBrush(x,y){
+  if(!_cfMaskCanvas||!_cfVisCanvas)return;
+  // 시각 피드백
+  const visCtx=_cfVisCanvas.getContext('2d');
+  visCtx.beginPath();
+  visCtx.arc(x,y,_cfBrushSize/2,0,Math.PI*2);
+  visCtx.fillStyle='rgba(220,40,40,0.45)';
+  visCtx.fill();
+  // 마스크 (배경 이미지 원본 좌표로 변환)
+  const bgObj=cv.getObjects().find(o=>!o.selectable);
+  if(!bgObj)return;
+  const srcEl=bgObj._element||bgObj._originalElement;
+  const bgNatW=srcEl.naturalWidth||srcEl.width;
+  const bgNatH=srcEl.naturalHeight||srcEl.height;
+  const bgRendW=bgObj.width*(bgObj.scaleX||1);
+  const bgRendH=bgObj.height*(bgObj.scaleY||1);
+  const rx=bgNatW/bgRendW,ry=bgNatH/bgRendH;
+  const maskCtx=_cfMaskCanvas.getContext('2d');
+  maskCtx.beginPath();
+  maskCtx.arc(x*rx,y*ry,(_cfBrushSize/2)*Math.max(rx,ry),0,Math.PI*2);
+  maskCtx.fillStyle='#ffffff';maskCtx.fill();
+}
+
+function _cfMouseDown(e){if(!contentFillMode)return;_cfDrawing=true;const p=_cfGetCanvasPos(e);_cfDrawBrush(p.x,p.y);}
+function _cfMouseMove(e){if(!contentFillMode||!_cfDrawing)return;const p=_cfGetCanvasPos(e);_cfDrawBrush(p.x,p.y);}
+function _cfMouseUp(){if(!contentFillMode)return;_cfDrawing=false;}
+function _cfWheel(e){
+  if(!contentFillMode||!e.altKey)return;
+  e.preventDefault();
+  _cfBrushSize=Math.max(4,Math.min(80,_cfBrushSize-(e.deltaY>0?2:-2)));
+}
+
+async function contentAwareFill(){
+  if(!loaded){toast('이미지를 먼저 업로드하세요','err');return;}
+  if(!_cfMaskCanvas){toast('브러시로 영역을 먼저 칠하세요','err');return;}
+  const bgObj=cv.getObjects().find(o=>!o.selectable);
+  if(!bgObj){toast('배경 이미지가 없습니다','err');return;}
+  // 마스크에 흰색 픽셀이 있는지 확인
+  const maskCtx=_cfMaskCanvas.getContext('2d');
+  const md=maskCtx.getImageData(0,0,_cfMaskCanvas.width,_cfMaskCanvas.height);
+  let hasPaint=false;
+  for(let i=0;i<md.data.length;i+=4){if(md.data[i]>128){hasPaint=true;break;}}
+  if(!hasPaint){toast('브러시로 영역을 먼저 칠하세요','err');return;}
+
+  setStatus('채우기 중...','spin');
+  toast('콘텐츠 인식 채우기 처리 중... (잠깐만요)');
+  // 완료 버튼 숨기기 (처리 중 중복 클릭 방지)
+  document.getElementById('content-fill-done-btn').style.display='none';
+
+  loadOpenCV(()=>{
+    try{
+      const srcEl=bgObj._element||bgObj._originalElement;
+      const bgNatW=srcEl.naturalWidth||srcEl.width;
+      const bgNatH=srcEl.naturalHeight||srcEl.height;
+      // 소스 이미지를 캔버스에 그리기
+      const srcCanvas=document.createElement('canvas');
+      srcCanvas.width=bgNatW;srcCanvas.height=bgNatH;
+      srcCanvas.getContext('2d').drawImage(srcEl,0,0,bgNatW,bgNatH);
+      // OpenCV Mat 생성 및 inpaint
+      const src=cv.imread(srcCanvas);
+      const maskMat=cv.imread(_cfMaskCanvas);
+      const dst=new cv.Mat();
+      const maskGray=new cv.Mat();
+      cv.cvtColor(maskMat,maskGray,cv.COLOR_RGBA2GRAY);
+      cv.inpaint(src,maskGray,dst,3,cv.INPAINT_TELEA);
+      // 결과를 캔버스에 출력
+      const resultCanvas=document.createElement('canvas');
+      resultCanvas.width=bgNatW;resultCanvas.height=bgNatH;
+      cv.imshow(resultCanvas,dst);
+      src.delete();maskMat.delete();dst.delete();maskGray.delete();
+      const resultUrl=resultCanvas.toDataURL('image/png');
+      fabric.Image.fromURL(resultUrl,cleanImg=>{
+        const scX=CANVAS_W/cleanImg.width;
+        const scY=cv.getHeight()/cleanImg.height;
+        cleanImg.set({left:0,top:0,scaleX:scX,scaleY:scY,selectable:false,evented:false});
+        const bg=cv.getObjects().find(o=>!o.selectable);
+        if(bg)cv.remove(bg);
+        cv.add(cleanImg);cv.sendToBack(cleanImg);
+        objs.forEach(o=>cv.bringToFront(o));
+        cv.requestRenderAll();
+        saveHistory();
+        toast('콘텐츠 인식 채우기 완료 (무료)','ok');
+        setStatus('완료','ok');
+      },{crossOrigin:'anonymous'});
+      _cfExitMode();
+    }catch(err){
+      toast('채우기 실패: '+err.message,'err');
+      setStatus('오류');
+      _cfExitMode();
+    }
+  });
 }
 
 // ── 영역 지정 지우기 ──
