@@ -1507,9 +1507,9 @@ function _spGetCanvasPos(e){
     // 실제 이미지 픽셀 좌표 (Gemini/crop용) — 캔버스 기준
     x:(e.clientX-canvasRect.left)*scaleX,
     y:(e.clientY-canvasRect.top)*scaleY,
-    // 오버레이 화면 좌표 — #wrap 기준
-    sx:e.clientX-wrapRect.left,
-    sy:e.clientY-wrapRect.top,
+    // 오버레이 화면 좌표 — #wrap 기준 (zoom 보정: getBoundingClientRect는 post-zoom 픽셀이므로 pre-zoom 로컬 좌표로 변환)
+    sx:(e.clientX-wrapRect.left)/zoom,
+    sy:(e.clientY-wrapRect.top)/zoom,
     sw:wrapRect.width,
     sh:wrapRect.height
   };
@@ -1634,10 +1634,10 @@ function _spOverlayMoving(e){
   if(!_spMoveState||!_spPendingRect)return;
   const dx=e.clientX-_spMoveState.startClientX;
   const dy=e.clientY-_spMoveState.startClientY;
-  // Update overlay screen position
+  // Update overlay screen position (dx/dy는 screen pixel delta → pre-zoom CSS 로컬 좌표로 보정)
   const overlay=document.getElementById('spot-drag-overlay');
-  const newSx=_spMoveState.startSx+dx;
-  const newSy=_spMoveState.startSy+dy;
+  const newSx=_spMoveState.startSx+dx/zoom;
+  const newSy=_spMoveState.startSy+dy/zoom;
   overlay.style.left=newSx+'px';
   overlay.style.top=newSy+'px';
   // Update confirm buttons position
@@ -1702,11 +1702,13 @@ function _spResizeHandleMoving(e){
   const {corner,startClientX,startClientY,startSx,startSy,startSw,startSh,startRawL,startRawT,startRawW,startRawH,scaleX,scaleY}=_spResizeState;
   const dx=e.clientX-startClientX;
   const dy=e.clientY-startClientY;
+  // CSS 로컬 좌표 delta (pre-zoom): screen pixel delta를 zoom으로 나눔
+  const dxL=dx/zoom, dyL=dy/zoom;
   let newSx=startSx,newSy=startSy,newSw=startSw,newSh=startSh;
-  if(corner==='nw'){newSx=startSx+dx;newSy=startSy+dy;newSw=startSw-dx;newSh=startSh-dy;}
-  else if(corner==='ne'){newSy=startSy+dy;newSw=startSw+dx;newSh=startSh-dy;}
-  else if(corner==='sw'){newSx=startSx+dx;newSw=startSw-dx;newSh=startSh+dy;}
-  else{newSw=startSw+dx;newSh=startSh+dy;}
+  if(corner==='nw'){newSx=startSx+dxL;newSy=startSy+dyL;newSw=startSw-dxL;newSh=startSh-dyL;}
+  else if(corner==='ne'){newSy=startSy+dyL;newSw=startSw+dxL;newSh=startSh-dyL;}
+  else if(corner==='sw'){newSx=startSx+dxL;newSw=startSw-dxL;newSh=startSh+dyL;}
+  else{newSw=startSw+dxL;newSh=startSh+dyL;}
   // minimum screen size 10px
   if(newSw<10){if(corner==='nw'||corner==='sw')newSx=startSx+startSw-10;newSw=10;}
   if(newSh<10){if(corner==='nw'||corner==='ne')newSy=startSy+startSh-10;newSh=10;}
