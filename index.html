@@ -196,6 +196,25 @@ select.pi{cursor:pointer}
 #spot-erase-banner{display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(61,45,110,.92);border:1px solid #7c3aed;color:#c4b5fd;font-size:11px;padding:5px 14px;border-radius:6px;z-index:500;pointer-events:none;white-space:nowrap;letter-spacing:.3px}
 #spot-erase-banner.show{display:block}
 #spot-drag-overlay{display:none;position:absolute;border:2px dashed #a78bfa;background:rgba(139,92,246,.15);pointer-events:none;z-index:600;box-sizing:border-box}
+#spot-confirm-wrap{
+  display:none;
+  position:absolute;
+  z-index:701;
+  gap:6px;
+  pointer-events:auto;
+}
+#spot-confirm-wrap.show{display:flex}
+.sp-confirm-btn{
+  padding:4px 12px;
+  border-radius:5px;
+  border:none;
+  cursor:pointer;
+  font-size:12px;
+  font-weight:600;
+  box-shadow:0 2px 6px rgba(0,0,0,.4);
+}
+.sp-confirm-btn.sp-run{background:#7c3aed;color:#fff}
+.sp-confirm-btn.sp-cancel{background:#374151;color:#d1d5db}
 /* ===== 콘텐츠 인식 채우기 ===== */
 .content-fill-btn.active{background:#14532d!important;color:#86efac!important;border-color:#16a34a!important}
 #content-fill-banner{display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(14,52,20,.92);border:1px solid #16a34a;color:#86efac;font-size:11px;padding:5px 14px;border-radius:6px;z-index:501;pointer-events:none;white-space:nowrap;letter-spacing:.3px}
@@ -307,8 +326,13 @@ select.pi{cursor:pointer}
       <canvas id="c"></canvas>
       <div id="spot-erase-banner">🎯 지울 영역을 드래그로 선택하세요</div>
       <div id="spot-drag-overlay"></div>
+      <div id="spot-confirm-wrap">
+        <button class="sp-confirm-btn sp-run" onclick="_spConfirmRun()">✅ 실행</button>
+        <button class="sp-confirm-btn sp-cancel" onclick="_spConfirmCancel()">✕ 취소</button>
+      </div>
       <div id="content-fill-banner">🪄 지울 영역을 브러시로 칠하세요 (완료 버튼 클릭) | Alt+휠로 브러시 크기 조절</div>
-      <button id="content-fill-done-btn" onclick="contentAwareFill()">✔ 채우기 완료</button>
+      <button id="content-fill-done-btn" onclick="contentAwareFill()">✅ 실행</button>
+      <button id="content-fill-cancel-btn" onclick="_cfCancelMask()" style="display:none">✕ 취소</button>
       <div id="shape-size-ctrl">
         <button class="shape-toggle-btn active" id="shape-btn-rect" onclick="_setShape('rect')">⬜ 사각형</button>
         <button class="shape-toggle-btn" id="shape-btn-circle" onclick="_setShape('circle')">⭕ 원형</button>
@@ -1225,6 +1249,7 @@ function toggleContentFillMode(){
     _cfVisCanvas.style.cssText='position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:550';
     wrap.appendChild(_cfVisCanvas);
     doneBtn.style.display='block';
+    document.getElementById('content-fill-cancel-btn').style.display='block';
     const canvasEl=cv.upperCanvasEl||document.getElementById('c');
     canvasEl.addEventListener('mousedown',_cfMouseDown);
     canvasEl.addEventListener('mousemove',_cfMouseMove);
@@ -1243,6 +1268,7 @@ function _cfExitMode(){
   btn.classList.remove('active');
   banner.classList.remove('show');
   doneBtn.style.display='none';
+  document.getElementById('content-fill-cancel-btn').style.display='none';
   cv.selection=true;
   cv.skipTargetFind=false;
   _hideShapeCtrl();
@@ -1300,6 +1326,17 @@ function _cfDrawBrush(x,y){
 function _cfMouseDown(e){if(!contentFillMode)return;_cfDrawing=true;const p=_cfGetCanvasPos(e);_cfDrawBrush(p.x,p.y);}
 function _cfMouseMove(e){if(!contentFillMode||!_cfDrawing)return;const p=_cfGetCanvasPos(e);_cfDrawBrush(p.x,p.y);}
 function _cfMouseUp(){if(!contentFillMode)return;_cfDrawing=false;}
+function _cfCancelMask(){
+  if(!_cfMaskCanvas||!_cfVisCanvas)return;
+  // Clear mask
+  const maskCtx=_cfMaskCanvas.getContext('2d');
+  maskCtx.fillStyle='#000000';
+  maskCtx.fillRect(0,0,_cfMaskCanvas.width,_cfMaskCanvas.height);
+  // Clear visual canvas
+  const visCtx=_cfVisCanvas.getContext('2d');
+  visCtx.clearRect(0,0,_cfVisCanvas.width,_cfVisCanvas.height);
+  toast('브러시 영역이 초기화되었습니다');
+}
 function _cfWheel(e){
   if(!contentFillMode||!e.altKey)return;
   e.preventDefault();
@@ -1352,10 +1389,12 @@ async function contentAwareFill(){
         const scY=cv.getHeight()/cleanImg.height;
         cleanImg.set({left:0,top:0,scaleX:scX,scaleY:scY,selectable:false,evented:false});
         const bg=cv.getObjects().find(o=>!o.selectable);
+        _historyLock=true;
         if(bg)cv.remove(bg);
         cv.add(cleanImg);cv.sendToBack(cleanImg);
         objs.forEach(o=>cv.bringToFront(o));
         cv.requestRenderAll();
+        _historyLock=false;
         saveHistory();
         toast('콘텐츠 인식 채우기 완료 (무료)','ok');
         setStatus('완료','ok');
@@ -1372,6 +1411,8 @@ async function contentAwareFill(){
 // ── 영역 지정 지우기 ──
 let spotEraseMode=false;
 let _spDrag={active:false,startX:0,startY:0};
+let _spPendingRect=null; // {rawL,rawT,rawW,rawH,shapeMode}
+let _spMoveState=null; // {startClientX,startClientY,startRawL,startRawT,startSx,startSy,scaleX,scaleY}
 
 function toggleSpotEraseMode(){
   if(!loaded){toast('이미지를 먼저 업로드하세요','err');return;}
@@ -1388,6 +1429,12 @@ function toggleSpotEraseMode(){
     _showShapeCtrl('spotErase');
     // 드래그 이벤트 등록
     const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+    // Fix overlay parent so its position:absolute is relative to canvas container
+    const canvasContainer=canvasEl.parentNode;
+    const overlayEl=document.getElementById('spot-drag-overlay');
+    const confirmWrap=document.getElementById('spot-confirm-wrap');
+    if(overlayEl.parentNode!==canvasContainer)canvasContainer.appendChild(overlayEl);
+    if(confirmWrap.parentNode!==canvasContainer)canvasContainer.appendChild(confirmWrap);
     canvasEl.addEventListener('mousedown',_spMouseDown);
     canvasEl.addEventListener('mousemove',_spMouseMove);
     canvasEl.addEventListener('mouseup',_spMouseUp);
@@ -1397,6 +1444,8 @@ function toggleSpotEraseMode(){
 }
 
 function _spExitMode(){
+  _spPendingRect=null;
+  _spHideConfirmBtns();
   spotEraseMode=false;
   const btn=document.getElementById('spotEraseBtn');
   const banner=document.getElementById('spot-erase-banner');
@@ -1462,10 +1511,6 @@ function _spMouseUp(e){
   if(!spotEraseMode||!_spDrag.active)return;
   _spDrag.active=false;
   const pos=_spGetCanvasPos(e);
-  const canvasEl=cv.upperCanvasEl||document.getElementById('c');
-  const rect=canvasEl.getBoundingClientRect();
-  const scaleX=cv.width/rect.width;
-  const scaleY=cv.height/rect.height;
 
   const rawL=Math.min(pos.x,_spDrag.startX);
   const rawT=Math.min(pos.y,_spDrag.startY);
@@ -1473,13 +1518,102 @@ function _spMouseUp(e){
   const rawH=Math.abs(pos.y-_spDrag.startY);
 
   const overlay=document.getElementById('spot-drag-overlay');
-  overlay.style.display='none';
 
-  if(rawW<10||rawH<10){return;} // 너무 작으면 무시
+  if(rawW<10||rawH<10){overlay.style.display='none';return;}
 
-  const shapeAtDrag=_shapeType;
+  _spPendingRect={rawL,rawT,rawW,rawH,shapeMode:_shapeType};
+
+  // Show confirm buttons just below the overlay
+  _spShowConfirmBtns();
+}
+
+function _spShowConfirmBtns(){
+  const overlay=document.getElementById('spot-drag-overlay');
+  const wrap=document.getElementById('spot-confirm-wrap');
+  const oLeft=parseFloat(overlay.style.left)||0;
+  const oTop=parseFloat(overlay.style.top)||0;
+  const oH=parseFloat(overlay.style.height)||0;
+  const oW=parseFloat(overlay.style.width)||0;
+  // Position buttons below the overlay (or above if near bottom)
+  const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+  const cRect=canvasEl.getBoundingClientRect();
+  const btnY=oTop+oH+6;
+  const btnX=oLeft;
+  wrap.style.left=btnX+'px';
+  wrap.style.top=btnY+'px';
+  wrap.classList.add('show');
+  // Allow overlay movement (pointer-events on overlay is now auto during pending)
+  overlay.style.pointerEvents='auto';
+  overlay.addEventListener('mousedown',_spOverlayMoveStart);
+}
+function _spHideConfirmBtns(){
+  const wrap=document.getElementById('spot-confirm-wrap');
+  wrap.classList.remove('show');
+  const overlay=document.getElementById('spot-drag-overlay');
+  overlay.style.pointerEvents='none';
+  overlay.removeEventListener('mousedown',_spOverlayMoveStart);
+}
+function _spConfirmRun(){
+  if(!_spPendingRect)return;
+  const {rawL,rawT,rawW,rawH,shapeMode}=_spPendingRect;
+  _spPendingRect=null;
+  _spHideConfirmBtns();
+  document.getElementById('spot-drag-overlay').style.display='none';
+  const shape=shapeMode;
   _spExitMode();
-  spotErase(rawL,rawT,rawW,rawH,shapeAtDrag);
+  spotErase(rawL,rawT,rawW,rawH,shape);
+}
+function _spConfirmCancel(){
+  _spPendingRect=null;
+  _spHideConfirmBtns();
+  document.getElementById('spot-drag-overlay').style.display='none';
+  // Keep spotEraseMode=true so user can draw again
+}
+
+function _spOverlayMoveStart(e){
+  if(!_spPendingRect)return;
+  e.preventDefault();
+  e.stopPropagation();
+  const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+  const rect=canvasEl.getBoundingClientRect();
+  const scaleX=cv.width/rect.width;
+  const scaleY=cv.height/rect.height;
+  const overlay=document.getElementById('spot-drag-overlay');
+  _spMoveState={
+    startClientX:e.clientX,
+    startClientY:e.clientY,
+    startRawL:_spPendingRect.rawL,
+    startRawT:_spPendingRect.rawT,
+    startSx:parseFloat(overlay.style.left)||0,
+    startSy:parseFloat(overlay.style.top)||0,
+    scaleX,scaleY
+  };
+  document.addEventListener('mousemove',_spOverlayMoving);
+  document.addEventListener('mouseup',_spOverlayMoveEnd);
+}
+function _spOverlayMoving(e){
+  if(!_spMoveState||!_spPendingRect)return;
+  const dx=e.clientX-_spMoveState.startClientX;
+  const dy=e.clientY-_spMoveState.startClientY;
+  // Update overlay screen position
+  const overlay=document.getElementById('spot-drag-overlay');
+  const newSx=_spMoveState.startSx+dx;
+  const newSy=_spMoveState.startSy+dy;
+  overlay.style.left=newSx+'px';
+  overlay.style.top=newSy+'px';
+  // Update confirm buttons position
+  const wrap=document.getElementById('spot-confirm-wrap');
+  wrap.style.left=newSx+'px';
+  wrap.style.top=(newSy+(parseFloat(overlay.style.height)||0)+6)+'px';
+  // Update canvas coordinates
+  _spPendingRect.rawL=_spMoveState.startRawL+dx*_spMoveState.scaleX;
+  _spPendingRect.rawT=_spMoveState.startRawT+dy*_spMoveState.scaleY;
+}
+function _spOverlayMoveEnd(e){
+  if(!_spMoveState)return;
+  _spMoveState=null;
+  document.removeEventListener('mousemove',_spOverlayMoving);
+  document.removeEventListener('mouseup',_spOverlayMoveEnd);
 }
 
 async function spotErase(rawL,rawT,rawW,rawH,shapeMode){
@@ -1564,8 +1698,11 @@ async function spotErase(rawL,rawT,rawW,rawH,shapeMode){
             _isSpotPatch:true
           });
           const bgIdx2=cv.getObjects().indexOf(bgObj);
+          _historyLock=true;
           cv.add(compImg);cv.moveTo(compImg,bgIdx2+1);
-          cv.requestRenderAll();saveHistory();
+          cv.requestRenderAll();
+          _historyLock=false;
+          saveHistory();
           toast('영역 텍스트 제거 완료','ok');setStatus('완료','ok');
         },{crossOrigin:'anonymous'});
       }else{
@@ -1579,9 +1716,11 @@ async function spotErase(rawL,rawT,rawW,rawH,shapeMode){
         });
         // 배경보다 위, 텍스트 레이어보다 아래에 삽입
         const bgIdx=cv.getObjects().indexOf(bgObj);
+        _historyLock=true;
         cv.add(patchImg);
         cv.moveTo(patchImg,bgIdx+1);
         cv.requestRenderAll();
+        _historyLock=false;
         saveHistory();
         toast('영역 텍스트 제거 완료','ok');
         setStatus('완료','ok');
@@ -1818,7 +1957,9 @@ function delSel(){
   cv.remove(sel);cv.requestRenderAll();onDesel();updateLayers();updateInfo();saveHistory();
 }
 
+let _historyLock=false;
 function saveHistory(){
+  if(_historyLock)return;
   const json=JSON.stringify(cv.toJSON(['_meta','selectable','evented']));
   history=history.slice(0,histIdx+1);
   history.push(json);
@@ -3070,6 +3211,40 @@ function miExtraBindEvents(){
     if(e.key==='ArrowUp')   _extraImgY-=step;
     if(e.key==='ArrowDown') _extraImgY+=step;
     miExtraApplyTransform();
+  });
+
+  // spot-erase overlay arrow key nudge
+  document.addEventListener('keydown',function(e){
+    if(!_spPendingRect)return;
+    if(!spotEraseMode)return;
+    const tag=(document.activeElement||{}).tagName||'';
+    if(/^(INPUT|TEXTAREA|SELECT)$/.test(tag))return;
+    const arrows=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
+    if(!arrows.includes(e.key))return;
+    e.preventDefault();
+    const step=e.shiftKey?10:2;
+    const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+    const rect=canvasEl.getBoundingClientRect();
+    const scaleX=cv.width/rect.width;
+    const scaleY=cv.height/rect.height;
+    let dx=0,dy=0;
+    if(e.key==='ArrowLeft') dx=-step;
+    if(e.key==='ArrowRight')dx=step;
+    if(e.key==='ArrowUp')   dy=-step;
+    if(e.key==='ArrowDown') dy=step;
+    // Move raw canvas coords
+    _spPendingRect.rawL+=dx*scaleX;
+    _spPendingRect.rawT+=dy*scaleY;
+    // Move overlay screen coords
+    const overlay=document.getElementById('spot-drag-overlay');
+    const curSx=parseFloat(overlay.style.left)||0;
+    const curSy=parseFloat(overlay.style.top)||0;
+    overlay.style.left=(curSx+dx)+'px';
+    overlay.style.top=(curSy+dy)+'px';
+    // Move confirm buttons
+    const wrap=document.getElementById('spot-confirm-wrap');
+    wrap.style.left=(curSx+dx)+'px';
+    wrap.style.top=((curSy+dy)+(parseFloat(overlay.style.height)||0)+6)+'px';
   });
 
   // wheel zoom (centered on stage center)
