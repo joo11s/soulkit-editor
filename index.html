@@ -215,6 +215,11 @@ select.pi{cursor:pointer}
 }
 .sp-confirm-btn.sp-run{background:#7c3aed;color:#fff}
 .sp-confirm-btn.sp-cancel{background:#374151;color:#d1d5db}
+.sp-resize-handle{position:absolute;width:8px;height:8px;background:#fff;border:1px solid #7c3aed;border-radius:1px;z-index:610;pointer-events:auto;box-sizing:border-box}
+.sp-resize-handle.nw{top:-4px;left:-4px;cursor:nw-resize}
+.sp-resize-handle.ne{top:-4px;right:-4px;cursor:ne-resize}
+.sp-resize-handle.sw{bottom:-4px;left:-4px;cursor:sw-resize}
+.sp-resize-handle.se{bottom:-4px;right:-4px;cursor:se-resize}
 /* ===== 콘텐츠 인식 채우기 ===== */
 .content-fill-btn.active{background:#14532d!important;color:#86efac!important;border-color:#16a34a!important}
 #content-fill-banner{display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(14,52,20,.92);border:1px solid #16a34a;color:#86efac;font-size:11px;padding:5px 14px;border-radius:6px;z-index:501;pointer-events:auto;white-space:nowrap;letter-spacing:.3px;align-items:center;gap:8px}
@@ -1439,6 +1444,7 @@ let spotEraseMode=false;
 let _spDrag={active:false,startX:0,startY:0};
 let _spPendingRect=null; // {rawL,rawT,rawW,rawH,shapeMode}
 let _spMoveState=null; // {startClientX,startClientY,startRawL,startRawT,startSx,startSy,scaleX,scaleY}
+let _spResizeState=null; // {corner,startClientX,startClientY,startSx,startSy,startSw,startSh,startRawL,startRawT,startRawW,startRawH,scaleX,scaleY}
 
 function toggleSpotEraseMode(){
   if(!loaded){toast('이미지를 먼저 업로드하세요','err');return;}
@@ -1575,6 +1581,8 @@ function _spShowConfirmBtns(){
   // Allow overlay movement (pointer-events on overlay is now auto during pending)
   overlay.style.pointerEvents='auto';
   overlay.addEventListener('mousedown',_spOverlayMoveStart);
+  // Show resize handles
+  _spUpdateResizeHandles();
 }
 function _spHideConfirmBtns(){
   const wrap=document.getElementById('spot-confirm-wrap');
@@ -1582,6 +1590,7 @@ function _spHideConfirmBtns(){
   const overlay=document.getElementById('spot-drag-overlay');
   overlay.style.pointerEvents='none';
   overlay.removeEventListener('mousedown',_spOverlayMoveStart);
+  _spRemoveResizeHandles();
 }
 function _spConfirmRun(){
   if(!_spPendingRect)return;
@@ -1644,6 +1653,103 @@ function _spOverlayMoveEnd(e){
   _spMoveState=null;
   document.removeEventListener('mousemove',_spOverlayMoving);
   document.removeEventListener('mouseup',_spOverlayMoveEnd);
+}
+
+function _spUpdateResizeHandles(){
+  const overlay=document.getElementById('spot-drag-overlay');
+  const corners=['nw','ne','sw','se'];
+  corners.forEach(c=>{
+    if(!overlay.querySelector('.sp-resize-handle.'+c)){
+      const h=document.createElement('div');
+      h.className='sp-resize-handle '+c;
+      h.addEventListener('mousedown',function(e){_spResizeHandleDown(c,e);});
+      overlay.appendChild(h);
+    }
+  });
+}
+function _spRemoveResizeHandles(){
+  const overlay=document.getElementById('spot-drag-overlay');
+  overlay.querySelectorAll('.sp-resize-handle').forEach(h=>h.remove());
+}
+function _spResizeHandleDown(corner,e){
+  if(!_spPendingRect)return;
+  e.preventDefault();
+  e.stopPropagation(); // prevent triggering overlay move
+  const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+  const rect=canvasEl.getBoundingClientRect();
+  const scaleX=cv.width/rect.width;
+  const scaleY=cv.height/rect.height;
+  const overlay=document.getElementById('spot-drag-overlay');
+  _spResizeState={
+    corner,
+    startClientX:e.clientX,
+    startClientY:e.clientY,
+    startSx:parseFloat(overlay.style.left)||0,
+    startSy:parseFloat(overlay.style.top)||0,
+    startSw:parseFloat(overlay.style.width)||0,
+    startSh:parseFloat(overlay.style.height)||0,
+    startRawL:_spPendingRect.rawL,
+    startRawT:_spPendingRect.rawT,
+    startRawW:_spPendingRect.rawW,
+    startRawH:_spPendingRect.rawH,
+    scaleX,scaleY
+  };
+  document.addEventListener('mousemove',_spResizeHandleMoving);
+  document.addEventListener('mouseup',_spResizeHandleEnd);
+}
+function _spResizeHandleMoving(e){
+  if(!_spResizeState||!_spPendingRect)return;
+  const {corner,startClientX,startClientY,startSx,startSy,startSw,startSh,startRawL,startRawT,startRawW,startRawH,scaleX,scaleY}=_spResizeState;
+  const dx=e.clientX-startClientX;
+  const dy=e.clientY-startClientY;
+  let newSx=startSx,newSy=startSy,newSw=startSw,newSh=startSh;
+  if(corner==='nw'){newSx=startSx+dx;newSy=startSy+dy;newSw=startSw-dx;newSh=startSh-dy;}
+  else if(corner==='ne'){newSy=startSy+dy;newSw=startSw+dx;newSh=startSh-dy;}
+  else if(corner==='sw'){newSx=startSx+dx;newSw=startSw-dx;newSh=startSh+dy;}
+  else{newSw=startSw+dx;newSh=startSh+dy;}
+  // minimum screen size 10px
+  if(newSw<10){if(corner==='nw'||corner==='sw')newSx=startSx+startSw-10;newSw=10;}
+  if(newSh<10){if(corner==='nw'||corner==='ne')newSy=startSy+startSh-10;newSh=10;}
+  // apply to overlay
+  const overlay=document.getElementById('spot-drag-overlay');
+  overlay.style.left=newSx+'px';
+  overlay.style.top=newSy+'px';
+  overlay.style.width=newSw+'px';
+  overlay.style.height=newSh+'px';
+  // reposition confirm buttons
+  const wrap=document.getElementById('spot-confirm-wrap');
+  wrap.style.left=newSx+'px';
+  wrap.style.top=(newSy+newSh+6)+'px';
+  // update raw canvas coords
+  if(corner==='nw'){
+    _spPendingRect.rawL=startRawL+dx*scaleX;
+    _spPendingRect.rawT=startRawT+dy*scaleY;
+    _spPendingRect.rawW=Math.max(10,startRawW-dx*scaleX);
+    _spPendingRect.rawH=Math.max(10,startRawH-dy*scaleY);
+  }else if(corner==='ne'){
+    _spPendingRect.rawT=startRawT+dy*scaleY;
+    _spPendingRect.rawW=Math.max(10,startRawW+dx*scaleX);
+    _spPendingRect.rawH=Math.max(10,startRawH-dy*scaleY);
+  }else if(corner==='sw'){
+    _spPendingRect.rawL=startRawL+dx*scaleX;
+    _spPendingRect.rawW=Math.max(10,startRawW-dx*scaleX);
+    _spPendingRect.rawH=Math.max(10,startRawH+dy*scaleY);
+  }else{
+    _spPendingRect.rawW=Math.max(10,startRawW+dx*scaleX);
+    _spPendingRect.rawH=Math.max(10,startRawH+dy*scaleY);
+  }
+  // clamp to canvas boundary
+  const cW=cv.width,cH=cv.height;
+  _spPendingRect.rawL=Math.max(0,Math.min(cW-_spPendingRect.rawW,_spPendingRect.rawL));
+  _spPendingRect.rawT=Math.max(0,Math.min(cH-_spPendingRect.rawH,_spPendingRect.rawT));
+  _spPendingRect.rawW=Math.min(_spPendingRect.rawW,cW-_spPendingRect.rawL);
+  _spPendingRect.rawH=Math.min(_spPendingRect.rawH,cH-_spPendingRect.rawT);
+}
+function _spResizeHandleEnd(e){
+  if(!_spResizeState)return;
+  _spResizeState=null;
+  document.removeEventListener('mousemove',_spResizeHandleMoving);
+  document.removeEventListener('mouseup',_spResizeHandleEnd);
 }
 
 async function spotErase(rawL,rawT,rawW,rawH,shapeMode){
@@ -3252,29 +3358,51 @@ function miExtraBindEvents(){
     const arrows=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
     if(!arrows.includes(e.key))return;
     e.preventDefault();
-    const step=e.shiftKey?10:2;
     const canvasEl=cv.upperCanvasEl||document.getElementById('c');
     const rect=canvasEl.getBoundingClientRect();
     const scaleX=cv.width/rect.width;
     const scaleY=cv.height/rect.height;
-    let dx=0,dy=0;
-    if(e.key==='ArrowLeft') dx=-step;
-    if(e.key==='ArrowRight')dx=step;
-    if(e.key==='ArrowUp')   dy=-step;
-    if(e.key==='ArrowDown') dy=step;
-    // Move raw canvas coords
-    _spPendingRect.rawL+=dx*scaleX;
-    _spPendingRect.rawT+=dy*scaleY;
-    // Move overlay screen coords
     const overlay=document.getElementById('spot-drag-overlay');
-    const curSx=parseFloat(overlay.style.left)||0;
-    const curSy=parseFloat(overlay.style.top)||0;
-    overlay.style.left=(curSx+dx)+'px';
-    overlay.style.top=(curSy+dy)+'px';
-    // Move confirm buttons
     const wrap=document.getElementById('spot-confirm-wrap');
-    wrap.style.left=(curSx+dx)+'px';
-    wrap.style.top=((curSy+dy)+(parseFloat(overlay.style.height)||0)+6)+'px';
+    if(e.shiftKey){
+      // Shift+Arrow: resize (extend/shrink width/height from right/bottom edge)
+      const step=2;
+      let dw=0,dh=0;
+      if(e.key==='ArrowRight')dw=step;
+      if(e.key==='ArrowLeft') dw=-step;
+      if(e.key==='ArrowDown') dh=step;
+      if(e.key==='ArrowUp')   dh=-step;
+      const cW=cv.width,cH=cv.height;
+      _spPendingRect.rawW=Math.max(10,Math.min(_spPendingRect.rawW+dw*scaleX,cW-_spPendingRect.rawL));
+      _spPendingRect.rawH=Math.max(10,Math.min(_spPendingRect.rawH+dh*scaleY,cH-_spPendingRect.rawT));
+      const curSw=parseFloat(overlay.style.width)||0;
+      const curSh=parseFloat(overlay.style.height)||0;
+      const curSx=parseFloat(overlay.style.left)||0;
+      const curSy=parseFloat(overlay.style.top)||0;
+      overlay.style.width=Math.max(10,curSw+dw)+'px';
+      overlay.style.height=Math.max(10,curSh+dh)+'px';
+      wrap.style.left=curSx+'px';
+      wrap.style.top=(curSy+(parseFloat(overlay.style.height)||0)+6)+'px';
+    }else{
+      // Arrow (no shift): move 2px
+      const step=2;
+      let dx=0,dy=0;
+      if(e.key==='ArrowLeft') dx=-step;
+      if(e.key==='ArrowRight')dx=step;
+      if(e.key==='ArrowUp')   dy=-step;
+      if(e.key==='ArrowDown') dy=step;
+      // Move raw canvas coords
+      _spPendingRect.rawL+=dx*scaleX;
+      _spPendingRect.rawT+=dy*scaleY;
+      // Move overlay screen coords
+      const curSx=parseFloat(overlay.style.left)||0;
+      const curSy=parseFloat(overlay.style.top)||0;
+      overlay.style.left=(curSx+dx)+'px';
+      overlay.style.top=(curSy+dy)+'px';
+      // Move confirm buttons
+      wrap.style.left=(curSx+dx)+'px';
+      wrap.style.top=((curSy+dy)+(parseFloat(overlay.style.height)||0)+6)+'px';
+    }
   });
 
   // wheel zoom (centered on stage center)
