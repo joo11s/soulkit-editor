@@ -1486,18 +1486,22 @@ function _spExitMode(){
 
 function _spGetCanvasPos(e){
   const canvasEl=cv.upperCanvasEl||document.getElementById('c');
-  const rect=canvasEl.getBoundingClientRect();
+  const canvasRect=canvasEl.getBoundingClientRect();
   // 캔버스 CSS 크기 vs 실제 픽셀 크기 비율 고려
-  const scaleX=cv.width/(rect.width);
-  const scaleY=cv.height/(rect.height);
+  const scaleX=cv.width/(canvasRect.width);
+  const scaleY=cv.height/(canvasRect.height);
+  // 오버레이는 #wrap(position:relative) 기준 absolute 배치이므로 wrapRect 기준으로 sx/sy 계산
+  const wrapEl=document.getElementById('wrap');
+  const wrapRect=wrapEl.getBoundingClientRect();
   return {
-    x:(e.clientX-rect.left)*scaleX,
-    y:(e.clientY-rect.top)*scaleY,
-    // 오버레이용 화면 좌표 (zoom-scaled wrap 내부)
-    sx:e.clientX-rect.left,
-    sy:e.clientY-rect.top,
-    sw:rect.width,
-    sh:rect.height
+    // 실제 이미지 픽셀 좌표 (Gemini/crop용) — 캔버스 기준
+    x:(e.clientX-canvasRect.left)*scaleX,
+    y:(e.clientY-canvasRect.top)*scaleY,
+    // 오버레이 화면 좌표 — #wrap 기준
+    sx:e.clientX-wrapRect.left,
+    sy:e.clientY-wrapRect.top,
+    sw:wrapRect.width,
+    sh:wrapRect.height
   };
 }
 
