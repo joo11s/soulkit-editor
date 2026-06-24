@@ -191,6 +191,11 @@ select.pi{cursor:pointer}
 .mi-crop-footer{margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
 .crop-ratio-btn{background:#1a1a1a;color:#666;border:1px solid #2a2a2a;font-size:10px;padding:3px 8px;border-radius:3px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
 .crop-ratio-btn.on{background:#1a1209;border-color:#f5e6c860;color:#f5e6c8}
+/* ===== 영역 지정 지우기 ===== */
+.spot-erase-btn.active{background:#3d2d6e;color:#c4b5fd;border-color:#7c3aed}
+#spot-erase-banner{display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(61,45,110,.92);border:1px solid #7c3aed;color:#c4b5fd;font-size:11px;padding:5px 14px;border-radius:6px;z-index:500;pointer-events:none;white-space:nowrap;letter-spacing:.3px}
+#spot-erase-banner.show{display:block}
+#spot-drag-overlay{display:none;position:absolute;border:2px dashed #a78bfa;background:rgba(139,92,246,.15);pointer-events:none;z-index:600;box-sizing:border-box}
 
 </style>
 </head>
@@ -283,8 +288,10 @@ select.pi{cursor:pointer}
       <div class="ph-i">🖼️</div>
       <div class="ph-t">이미지 업로드 →<br>텍스트 자동 제거 + 번역</div>
     </div>
-    <div id="wrap">
+    <div id="wrap" style="position:relative">
       <canvas id="c"></canvas>
+      <div id="spot-erase-banner">🎯 지울 영역을 드래그로 선택하세요</div>
+      <div id="spot-drag-overlay"></div>
       <div class="ov" id="ov">
         <div class="pix-office">
           <div class="pix-char-wrap">
@@ -305,7 +312,8 @@ select.pi{cursor:pointer}
     <div class="sec">
       <div class="stitle">속성</div>
       <div id="ns" class="ns">요소를 선택하세요
-        <div style="margin-top:8px"><button class="btn ai" style="width:100%;font-size:10px" onclick="removeTextAgain()">✂ 중국어 텍스트 다시 지우기</button></div>
+        <div style="margin-top:8px"><button id="spotEraseBtn" class="btn ai spot-erase-btn" style="width:100%;font-size:10px" onclick="toggleSpotEraseMode()">🎯 영역 지정 지우기</button></div>
+        <div style="margin-top:4px"><button class="btn ai" style="width:100%;font-size:10px" onclick="removeTextAgain()">✂ 중국어 텍스트 다시 지우기</button></div>
       </div>
       <div id="props" style="display:none">
         <div id="text-props">
@@ -1125,6 +1133,190 @@ async function removeTextAgain(){
     hideOv();toast('텍스트 재제거 완료','ok');setStatus('완료','ok');
   }catch(e){
     hideOv();toast('텍스트 제거 실패: '+e.message,'err');setStatus('오류');
+  }
+}
+
+// ── 영역 지정 지우기 ──
+let spotEraseMode=false;
+let _spDrag={active:false,startX:0,startY:0};
+
+function toggleSpotEraseMode(){
+  if(!loaded){toast('이미지를 먼저 업로드하세요','err');return;}
+  spotEraseMode=!spotEraseMode;
+  const btn=document.getElementById('spotEraseBtn');
+  const banner=document.getElementById('spot-erase-banner');
+  const overlay=document.getElementById('spot-drag-overlay');
+  if(spotEraseMode){
+    btn.classList.add('active');
+    banner.classList.add('show');
+    cv.selection=false;
+    cv.discardActiveObject();cv.requestRenderAll();
+    // 드래그 이벤트 등록
+    const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+    canvasEl.addEventListener('mousedown',_spMouseDown);
+    canvasEl.addEventListener('mousemove',_spMouseMove);
+    canvasEl.addEventListener('mouseup',_spMouseUp);
+  } else {
+    _spExitMode();
+  }
+}
+
+function _spExitMode(){
+  spotEraseMode=false;
+  const btn=document.getElementById('spotEraseBtn');
+  const banner=document.getElementById('spot-erase-banner');
+  const overlay=document.getElementById('spot-drag-overlay');
+  btn.classList.remove('active');
+  banner.classList.remove('show');
+  overlay.style.display='none';
+  cv.selection=true;
+  const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+  canvasEl.removeEventListener('mousedown',_spMouseDown);
+  canvasEl.removeEventListener('mousemove',_spMouseMove);
+  canvasEl.removeEventListener('mouseup',_spMouseUp);
+}
+
+function _spGetCanvasPos(e){
+  const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+  const rect=canvasEl.getBoundingClientRect();
+  // 캔버스 CSS 크기 vs 실제 픽셀 크기 비율 고려
+  const scaleX=cv.width/(rect.width);
+  const scaleY=cv.height/(rect.height);
+  return {
+    x:(e.clientX-rect.left)*scaleX,
+    y:(e.clientY-rect.top)*scaleY,
+    // 오버레이용 화면 좌표 (zoom-scaled wrap 내부)
+    sx:e.clientX-rect.left,
+    sy:e.clientY-rect.top,
+    sw:rect.width,
+    sh:rect.height
+  };
+}
+
+function _spMouseDown(e){
+  if(!spotEraseMode)return;
+  const pos=_spGetCanvasPos(e);
+  _spDrag={active:true,startX:pos.x,startY:pos.y,startSX:pos.sx,startSY:pos.sy};
+  const overlay=document.getElementById('spot-drag-overlay');
+  overlay.style.display='block';
+  overlay.style.left=pos.sx+'px';
+  overlay.style.top=pos.sy+'px';
+  overlay.style.width='0px';
+  overlay.style.height='0px';
+}
+
+function _spMouseMove(e){
+  if(!spotEraseMode||!_spDrag.active)return;
+  const pos=_spGetCanvasPos(e);
+  const x=Math.min(pos.sx,_spDrag.startSX);
+  const y=Math.min(pos.sy,_spDrag.startSY);
+  const w=Math.abs(pos.sx-_spDrag.startSX);
+  const h=Math.abs(pos.sy-_spDrag.startSY);
+  const overlay=document.getElementById('spot-drag-overlay');
+  overlay.style.left=x+'px';
+  overlay.style.top=y+'px';
+  overlay.style.width=w+'px';
+  overlay.style.height=h+'px';
+}
+
+function _spMouseUp(e){
+  if(!spotEraseMode||!_spDrag.active)return;
+  _spDrag.active=false;
+  const pos=_spGetCanvasPos(e);
+  const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+  const rect=canvasEl.getBoundingClientRect();
+  const scaleX=cv.width/rect.width;
+  const scaleY=cv.height/rect.height;
+
+  const rawL=Math.min(pos.x,_spDrag.startX);
+  const rawT=Math.min(pos.y,_spDrag.startY);
+  const rawW=Math.abs(pos.x-_spDrag.startX);
+  const rawH=Math.abs(pos.y-_spDrag.startY);
+
+  const overlay=document.getElementById('spot-drag-overlay');
+  overlay.style.display='none';
+
+  if(rawW<10||rawH<10){return;} // 너무 작으면 무시
+
+  _spExitMode();
+  spotErase(rawL,rawT,rawW,rawH);
+}
+
+async function spotErase(rawL,rawT,rawW,rawH){
+  if(!loaded){toast('이미지를 먼저 업로드하세요','err');return;}
+  const bgObj=cv.getObjects().find(o=>!o.selectable);
+  if(!bgObj){toast('배경 이미지가 없습니다','err');return;}
+
+  // 패딩 추가 (약 17%)
+  const padX=Math.round(rawW*0.17);
+  const padY=Math.round(rawH*0.17);
+  const cW=cv.width, cH=cv.height;
+  const left=Math.max(0,Math.round(rawL-padX));
+  const top=Math.max(0,Math.round(rawT-padY));
+  const right=Math.min(cW,Math.round(rawL+rawW+padX));
+  const bottom=Math.min(cH,Math.round(rawT+rawH+padY));
+  const cropW=right-left;
+  const cropH=bottom-top;
+
+  // 배경 이미지 원본 소스에서 해당 영역만 잘라내기
+  const srcEl=bgObj._element||bgObj._originalElement;
+  const bgNatW=srcEl.naturalWidth||srcEl.width;
+  const bgNatH=srcEl.naturalHeight||srcEl.height;
+  const bgRendW=bgObj.width*(bgObj.scaleX||1);
+  const bgRendH=bgObj.height*(bgObj.scaleY||1);
+  const ratioX=bgNatW/bgRendW;
+  const ratioY=bgNatH/bgRendH;
+
+  const srcX=Math.round(left*ratioX);
+  const srcY=Math.round(top*ratioY);
+  const srcW=Math.round(cropW*ratioX);
+  const srcH=Math.round(cropH*ratioY);
+
+  const tmpC=document.createElement('canvas');
+  tmpC.width=srcW;tmpC.height=srcH;
+  const tmpCtx=tmpC.getContext('2d');
+  tmpCtx.drawImage(srcEl,srcX,srcY,srcW,srcH,0,0,srcW,srcH);
+  const cropDataUrl=tmpC.toDataURL('image/png');
+  const cropBase64=cropDataUrl.split(',')[1];
+
+  const prompt='Remove all Chinese text/characters from this image completely. Reconstruct the background naturally in the exact same style and color as the surrounding area. Keep everything else exactly the same. Keep the same image size. Do not add any new text.';
+
+  // 로딩 표시 (statusbar 활용)
+  setStatus('영역 지우기 중...','spin');
+  toast('영역 텍스트 제거 중... (10~30초)');
+
+  try{
+    const res=await fetch(GEMINI_EDIT_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({base64:cropBase64,mimeType:'image/png',prompt})
+    });
+    const data=await res.json();
+    if(!data.base64)throw new Error('결과 이미지 없음');
+
+    const resultUrl=`data:${data.mimeType||'image/png'};base64,${data.base64}`;
+
+    fabric.Image.fromURL(resultUrl,patchImg=>{
+      // 결과 이미지를 원래 확장 영역 위치에 딱 맞게 배치
+      patchImg.set({
+        left,top,
+        scaleX:cropW/patchImg.width,
+        scaleY:cropH/patchImg.height,
+        selectable:false,evented:false,
+        _isSpotPatch:true
+      });
+      // 배경보다 위, 텍스트 레이어보다 아래에 삽입
+      const bgIdx=cv.getObjects().indexOf(bgObj);
+      cv.add(patchImg);
+      cv.moveTo(patchImg,bgIdx+1);
+      cv.requestRenderAll();
+      saveHistory();
+      toast('영역 텍스트 제거 완료','ok');
+      setStatus('완료','ok');
+    },{crossOrigin:'anonymous'});
+  }catch(e){
+    toast('영역 제거 실패: '+e.message,'err');
+    setStatus('오류');
   }
 }
 
