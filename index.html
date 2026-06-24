@@ -1395,16 +1395,20 @@ async function contentAwareFill(){
       srcCanvas.getContext('2d').drawImage(srcEl,0,0,bgNatW,bgNatH);
       // OpenCV Mat 생성 및 inpaint
       const src=_ocv.imread(srcCanvas);
+      const srcRGB=new _ocv.Mat();
+      _ocv.cvtColor(src,srcRGB,_ocv.COLOR_RGBA2RGB); // inpaint는 3채널만 지원
       const maskMat=_ocv.imread(_cfMaskCanvas);
       const dst=new _ocv.Mat();
       const maskGray=new _ocv.Mat();
       _ocv.cvtColor(maskMat,maskGray,_ocv.COLOR_RGBA2GRAY);
-      _ocv.inpaint(src,maskGray,dst,3,_ocv.INPAINT_TELEA);
-      // 결과를 캔버스에 출력
+      _ocv.inpaint(srcRGB,maskGray,dst,3,_ocv.INPAINT_TELEA); // src 대신 srcRGB 사용
+      // 결과를 캔버스에 출력 (dst가 3채널이므로 RGBA로 변환)
+      const dstRGBA=new _ocv.Mat();
+      _ocv.cvtColor(dst,dstRGBA,_ocv.COLOR_RGB2RGBA);
       const resultCanvas=document.createElement('canvas');
       resultCanvas.width=bgNatW;resultCanvas.height=bgNatH;
-      _ocv.imshow(resultCanvas,dst);
-      src.delete();maskMat.delete();dst.delete();maskGray.delete();
+      _ocv.imshow(resultCanvas,dstRGBA);
+      src.delete();srcRGB.delete();maskMat.delete();dst.delete();dstRGBA.delete();maskGray.delete();
       const resultUrl=resultCanvas.toDataURL('image/png');
       fabric.Image.fromURL(resultUrl,cleanImg=>{
         const scX=CANVAS_W/cleanImg.width;
