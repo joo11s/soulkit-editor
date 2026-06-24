@@ -193,7 +193,7 @@ select.pi{cursor:pointer}
 .crop-ratio-btn.on{background:#1a1209;border-color:#f5e6c860;color:#f5e6c8}
 /* ===== 영역 지정 지우기 ===== */
 .spot-erase-btn.active{background:#3d2d6e;color:#c4b5fd;border-color:#7c3aed}
-#spot-erase-banner{display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(61,45,110,.92);border:1px solid #7c3aed;color:#c4b5fd;font-size:11px;padding:5px 14px;border-radius:6px;z-index:500;pointer-events:none;white-space:nowrap;letter-spacing:.3px}
+#spot-erase-banner{display:none;position:fixed;top:58px;left:50%;transform:translateX(-50%);background:rgba(61,45,110,.92);border:1px solid #7c3aed;color:#c4b5fd;font-size:11px;padding:5px 14px;border-radius:6px;z-index:9999;pointer-events:none;white-space:nowrap;letter-spacing:.3px}
 #spot-erase-banner.show{display:block}
 #spot-drag-overlay{display:none;position:absolute;border:2px dashed #a78bfa;background:rgba(139,92,246,.15);pointer-events:none;z-index:600;box-sizing:border-box}
 #spot-confirm-wrap{
@@ -222,7 +222,7 @@ select.pi{cursor:pointer}
 .sp-resize-handle.se{bottom:-4px;right:-4px;cursor:se-resize}
 /* ===== 콘텐츠 인식 채우기 ===== */
 .content-fill-btn.active{background:#14532d!important;color:#86efac!important;border-color:#16a34a!important}
-#content-fill-banner{display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(14,52,20,.92);border:1px solid #16a34a;color:#86efac;font-size:11px;padding:5px 14px;border-radius:6px;z-index:501;pointer-events:auto;white-space:nowrap;letter-spacing:.3px;align-items:center;gap:8px}
+#content-fill-banner{display:none;position:fixed;top:58px;left:50%;transform:translateX(-50%);background:rgba(14,52,20,.92);border:1px solid #16a34a;color:#86efac;font-size:11px;padding:5px 14px;border-radius:6px;z-index:9999;pointer-events:auto;white-space:nowrap;letter-spacing:.3px;align-items:center;gap:8px}
 #content-fill-banner.show{display:flex}
 #content-fill-done-btn{display:none;background:#16a34a;color:#fff;font-size:12px;font-weight:bold;padding:4px 14px;border-radius:6px;border:none;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.45);white-space:nowrap;margin-left:8px}
 #content-fill-cancel-btn{display:none;background:rgba(255,255,255,.15);color:#86efac;font-size:12px;font-weight:bold;padding:4px 10px;border-radius:6px;border:1px solid #16a34a;cursor:pointer;white-space:nowrap;margin-left:4px}
@@ -242,7 +242,7 @@ select.pi{cursor:pointer}
 .cf-resize-handle.sw{bottom:-4px;left:-4px;cursor:sw-resize}
 .cf-resize-handle.se{bottom:-4px;right:-4px;cursor:se-resize}
 /* ===== 모양/크기 컨트롤 패널 ===== */
-#shape-size-ctrl{display:none;position:absolute;top:40px;left:50%;transform:translateX(-50%);background:rgba(15,15,25,.92);border:1px solid #3d2d6e;border-radius:8px;padding:6px 12px;z-index:510;pointer-events:auto;display:none;align-items:center;gap:8px;white-space:nowrap}
+#shape-size-ctrl{display:none;position:fixed;top:96px;left:50%;transform:translateX(-50%);background:rgba(15,15,25,.92);border:1px solid #3d2d6e;border-radius:8px;padding:6px 12px;z-index:9998;pointer-events:auto;align-items:center;gap:8px;white-space:nowrap}
 #shape-size-ctrl.show{display:flex}
 #shape-size-ctrl.green{border-color:#16a34a}
 .shape-toggle-btn{background:#1a1a2e;border:1px solid #3d2d6e;color:#a78bfa;font-size:11px;padding:3px 10px;border-radius:5px;cursor:pointer;transition:all .15s}
