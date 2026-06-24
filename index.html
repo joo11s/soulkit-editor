@@ -201,6 +201,16 @@ select.pi{cursor:pointer}
 #content-fill-banner{display:none;position:absolute;top:8px;left:50%;transform:translateX(-50%);background:rgba(14,52,20,.92);border:1px solid #16a34a;color:#86efac;font-size:11px;padding:5px 14px;border-radius:6px;z-index:501;pointer-events:none;white-space:nowrap;letter-spacing:.3px}
 #content-fill-banner.show{display:block}
 #content-fill-done-btn{display:none;position:absolute;bottom:40px;left:50%;transform:translateX(-50%);background:#16a34a;color:#fff;font-size:12px;font-weight:bold;padding:6px 20px;border-radius:8px;border:none;cursor:pointer;z-index:700;box-shadow:0 2px 8px rgba(0,0,0,.45);white-space:nowrap}
+/* ===== 모양/크기 컨트롤 패널 ===== */
+#shape-size-ctrl{display:none;position:absolute;top:40px;left:50%;transform:translateX(-50%);background:rgba(15,15,25,.92);border:1px solid #3d2d6e;border-radius:8px;padding:6px 12px;z-index:510;pointer-events:auto;display:none;align-items:center;gap:8px;white-space:nowrap}
+#shape-size-ctrl.show{display:flex}
+#shape-size-ctrl.green{border-color:#16a34a}
+.shape-toggle-btn{background:#1a1a2e;border:1px solid #3d2d6e;color:#a78bfa;font-size:11px;padding:3px 10px;border-radius:5px;cursor:pointer;transition:all .15s}
+.shape-toggle-btn.active{background:#3d2d6e;color:#c4b5fd;border-color:#7c3aed}
+#shape-size-ctrl.green .shape-toggle-btn{border-color:#14532d;color:#86efac}
+#shape-size-ctrl.green .shape-toggle-btn.active{background:#14532d;border-color:#16a34a;color:#86efac}
+.shape-size-label{font-size:10px;color:#888;margin-left:4px}
+.shape-size-val{font-size:10px;color:#aaa;min-width:26px;text-align:right}
 
 </style>
 </head>
@@ -299,6 +309,13 @@ select.pi{cursor:pointer}
       <div id="spot-drag-overlay"></div>
       <div id="content-fill-banner">🪄 지울 영역을 브러시로 칠하세요 (완료 버튼 클릭) | Alt+휠로 브러시 크기 조절</div>
       <button id="content-fill-done-btn" onclick="contentAwareFill()">✔ 채우기 완료</button>
+      <div id="shape-size-ctrl">
+        <button class="shape-toggle-btn active" id="shape-btn-rect" onclick="_setShape('rect')">⬜ 사각형</button>
+        <button class="shape-toggle-btn" id="shape-btn-circle" onclick="_setShape('circle')">⭕ 원형</button>
+        <span class="shape-size-label">크기</span>
+        <input type="range" min="8" max="60" value="14" id="shape-size-slider" oninput="_onShapeSizeSlider()" style="width:70px;accent-color:#a78bfa">
+        <span class="shape-size-val" id="shape-size-val">14px</span>
+      </div>
       <div class="ov" id="ov">
         <div class="pix-office">
           <div class="pix-char-wrap">
@@ -1123,6 +1140,41 @@ async function removeTextAgain(){
   }
 }
 
+// ── 모양/크기 컨트롤 ──
+let _activeMode=null; // 'spotErase' | 'contentFill' | null
+let _shapeType='rect'; // 'rect' | 'circle'
+let _shapeSize=14;
+
+function _showShapeCtrl(mode){
+  _activeMode=mode;
+  const ctrl=document.getElementById('shape-size-ctrl');
+  ctrl.classList.add('show');
+  if(mode==='contentFill'){ctrl.classList.add('green');}else{ctrl.classList.remove('green');}
+  _syncShapeCtrl();
+}
+function _hideShapeCtrl(){
+  _activeMode=null;
+  const ctrl=document.getElementById('shape-size-ctrl');
+  ctrl.classList.remove('show');
+}
+function _syncShapeCtrl(){
+  document.getElementById('shape-btn-rect').classList.toggle('active',_shapeType==='rect');
+  document.getElementById('shape-btn-circle').classList.toggle('active',_shapeType==='circle');
+  document.getElementById('shape-size-slider').value=_shapeSize;
+  document.getElementById('shape-size-val').textContent=_shapeSize+'px';
+}
+function _setShape(type){
+  _shapeType=type;
+  _syncShapeCtrl();
+  // contentFill 브러시 크기 동기화
+  if(_activeMode==='contentFill') _cfBrushSize=_shapeSize;
+}
+function _onShapeSizeSlider(){
+  _shapeSize=parseInt(document.getElementById('shape-size-slider').value);
+  document.getElementById('shape-size-val').textContent=_shapeSize+'px';
+  if(_activeMode==='contentFill') _cfBrushSize=_shapeSize;
+}
+
 // ── 콘텐츠 인식 채우기 (OpenCV.js inpaint) ──
 let contentFillMode=false;
 let _cfBrushSize=14;
@@ -1153,7 +1205,9 @@ function toggleContentFillMode(){
     btn.classList.add('active');
     banner.classList.add('show');
     cv.selection=false;
+    cv.skipTargetFind=true;
     cv.discardActiveObject();cv.requestRenderAll();
+    _showShapeCtrl('contentFill');
     const bgObj=cv.getObjects().find(o=>!o.selectable);
     if(!bgObj){toast('배경 이미지가 없습니다','err');contentFillMode=false;btn.classList.remove('active');banner.classList.remove('show');return;}
     // 마스크 캔버스 (배경 이미지 원본 크기)
@@ -1190,6 +1244,8 @@ function _cfExitMode(){
   banner.classList.remove('show');
   doneBtn.style.display='none';
   cv.selection=true;
+  cv.skipTargetFind=false;
+  _hideShapeCtrl();
   if(_cfVisCanvas&&_cfVisCanvas.parentNode){_cfVisCanvas.parentNode.removeChild(_cfVisCanvas);}
   _cfVisCanvas=null;_cfMaskCanvas=null;
   const canvasEl=cv.upperCanvasEl||document.getElementById('c');
@@ -1210,12 +1266,17 @@ function _cfGetCanvasPos(e){
 
 function _cfDrawBrush(x,y){
   if(!_cfMaskCanvas||!_cfVisCanvas)return;
+  const half=_cfBrushSize/2;
   // 시각 피드백
   const visCtx=_cfVisCanvas.getContext('2d');
-  visCtx.beginPath();
-  visCtx.arc(x,y,_cfBrushSize/2,0,Math.PI*2);
   visCtx.fillStyle='rgba(220,40,40,0.45)';
-  visCtx.fill();
+  if(_shapeType==='rect'){
+    visCtx.fillRect(x-half,y-half,_cfBrushSize,_cfBrushSize);
+  }else{
+    visCtx.beginPath();
+    visCtx.arc(x,y,half,0,Math.PI*2);
+    visCtx.fill();
+  }
   // 마스크 (배경 이미지 원본 좌표로 변환)
   const bgObj=cv.getObjects().find(o=>!o.selectable);
   if(!bgObj)return;
@@ -1226,9 +1287,14 @@ function _cfDrawBrush(x,y){
   const bgRendH=bgObj.height*(bgObj.scaleY||1);
   const rx=bgNatW/bgRendW,ry=bgNatH/bgRendH;
   const maskCtx=_cfMaskCanvas.getContext('2d');
-  maskCtx.beginPath();
-  maskCtx.arc(x*rx,y*ry,(_cfBrushSize/2)*Math.max(rx,ry),0,Math.PI*2);
-  maskCtx.fillStyle='#ffffff';maskCtx.fill();
+  maskCtx.fillStyle='#ffffff';
+  if(_shapeType==='rect'){
+    maskCtx.fillRect((x-half)*rx,(y-half)*ry,_cfBrushSize*rx,_cfBrushSize*ry);
+  }else{
+    maskCtx.beginPath();
+    maskCtx.arc(x*rx,y*ry,(half)*Math.max(rx,ry),0,Math.PI*2);
+    maskCtx.fill();
+  }
 }
 
 function _cfMouseDown(e){if(!contentFillMode)return;_cfDrawing=true;const p=_cfGetCanvasPos(e);_cfDrawBrush(p.x,p.y);}
@@ -1238,6 +1304,8 @@ function _cfWheel(e){
   if(!contentFillMode||!e.altKey)return;
   e.preventDefault();
   _cfBrushSize=Math.max(4,Math.min(80,_cfBrushSize-(e.deltaY>0?2:-2)));
+  _shapeSize=_cfBrushSize;
+  _syncShapeCtrl();
 }
 
 async function contentAwareFill(){
@@ -1315,7 +1383,9 @@ function toggleSpotEraseMode(){
     btn.classList.add('active');
     banner.classList.add('show');
     cv.selection=false;
+    cv.skipTargetFind=true;
     cv.discardActiveObject();cv.requestRenderAll();
+    _showShapeCtrl('spotErase');
     // 드래그 이벤트 등록
     const canvasEl=cv.upperCanvasEl||document.getElementById('c');
     canvasEl.addEventListener('mousedown',_spMouseDown);
@@ -1335,6 +1405,8 @@ function _spExitMode(){
   banner.classList.remove('show');
   overlay.style.display='none';
   cv.selection=true;
+  cv.skipTargetFind=false;
+  _hideShapeCtrl();
   const canvasEl=cv.upperCanvasEl||document.getElementById('c');
   canvasEl.removeEventListener('mousedown',_spMouseDown);
   canvasEl.removeEventListener('mousemove',_spMouseMove);
@@ -1368,6 +1440,7 @@ function _spMouseDown(e){
   overlay.style.top=pos.sy+'px';
   overlay.style.width='0px';
   overlay.style.height='0px';
+  overlay.style.borderRadius=_shapeType==='circle'?'50%':'0';
 }
 
 function _spMouseMove(e){
@@ -1382,6 +1455,7 @@ function _spMouseMove(e){
   overlay.style.top=y+'px';
   overlay.style.width=w+'px';
   overlay.style.height=h+'px';
+  overlay.style.borderRadius=_shapeType==='circle'?'50%':'0';
 }
 
 function _spMouseUp(e){
@@ -1403,14 +1477,16 @@ function _spMouseUp(e){
 
   if(rawW<10||rawH<10){return;} // 너무 작으면 무시
 
+  const shapeAtDrag=_shapeType;
   _spExitMode();
-  spotErase(rawL,rawT,rawW,rawH);
+  spotErase(rawL,rawT,rawW,rawH,shapeAtDrag);
 }
 
-async function spotErase(rawL,rawT,rawW,rawH){
+async function spotErase(rawL,rawT,rawW,rawH,shapeMode){
   if(!loaded){toast('이미지를 먼저 업로드하세요','err');return;}
   const bgObj=cv.getObjects().find(o=>!o.selectable);
   if(!bgObj){toast('배경 이미지가 없습니다','err');return;}
+  const useCircle=(shapeMode||_shapeType)==='circle';
 
   // 패딩 추가 (약 17%)
   const padX=Math.round(rawW*0.17);
@@ -1462,22 +1538,54 @@ async function spotErase(rawL,rawT,rawW,rawH){
     const resultUrl=`data:${data.mimeType||'image/png'};base64,${data.base64}`;
 
     fabric.Image.fromURL(resultUrl,patchImg=>{
-      // 결과 이미지를 원래 확장 영역 위치에 딱 맞게 배치
-      patchImg.set({
-        left,top,
-        scaleX:cropW/patchImg.width,
-        scaleY:cropH/patchImg.height,
-        selectable:false,evented:false,
-        _isSpotPatch:true
-      });
-      // 배경보다 위, 텍스트 레이어보다 아래에 삽입
-      const bgIdx=cv.getObjects().indexOf(bgObj);
-      cv.add(patchImg);
-      cv.moveTo(patchImg,bgIdx+1);
-      cv.requestRenderAll();
-      saveHistory();
-      toast('영역 텍스트 제거 완료','ok');
-      setStatus('완료','ok');
+      if(useCircle){
+        // 원형 클리핑 마스크 적용: 타원 바깥 픽셀을 원본 배경과 합성
+        const pW=patchImg.width,pH=patchImg.height;
+        const compC=document.createElement('canvas');
+        compC.width=pW;compC.height=pH;
+        const compCtx=compC.getContext('2d');
+        // 원본 배경 해당 영역 그리기
+        compCtx.drawImage(srcEl,srcX,srcY,srcW,srcH,0,0,pW,pH);
+        // 타원 클립 후 패치 이미지 합성
+        compCtx.save();
+        compCtx.beginPath();
+        compCtx.ellipse(pW/2,pH/2,pW/2,pH/2,0,0,Math.PI*2);
+        compCtx.clip();
+        const patchEl=patchImg._element||patchImg._originalElement;
+        compCtx.drawImage(patchEl,0,0,pW,pH);
+        compCtx.restore();
+        const compUrl=compC.toDataURL('image/png');
+        fabric.Image.fromURL(compUrl,compImg=>{
+          compImg.set({
+            left,top,
+            scaleX:cropW/compImg.width,
+            scaleY:cropH/compImg.height,
+            selectable:false,evented:false,
+            _isSpotPatch:true
+          });
+          const bgIdx2=cv.getObjects().indexOf(bgObj);
+          cv.add(compImg);cv.moveTo(compImg,bgIdx2+1);
+          cv.requestRenderAll();saveHistory();
+          toast('영역 텍스트 제거 완료','ok');setStatus('완료','ok');
+        },{crossOrigin:'anonymous'});
+      }else{
+        // 결과 이미지를 원래 확장 영역 위치에 딱 맞게 배치
+        patchImg.set({
+          left,top,
+          scaleX:cropW/patchImg.width,
+          scaleY:cropH/patchImg.height,
+          selectable:false,evented:false,
+          _isSpotPatch:true
+        });
+        // 배경보다 위, 텍스트 레이어보다 아래에 삽입
+        const bgIdx=cv.getObjects().indexOf(bgObj);
+        cv.add(patchImg);
+        cv.moveTo(patchImg,bgIdx+1);
+        cv.requestRenderAll();
+        saveHistory();
+        toast('영역 텍스트 제거 완료','ok');
+        setStatus('완료','ok');
+      }
     },{crossOrigin:'anonymous'});
   }catch(e){
     toast('영역 제거 실패: '+e.message,'err');
@@ -1711,7 +1819,7 @@ function delSel(){
 }
 
 function saveHistory(){
-  const json=JSON.stringify(cv.toJSON(['_meta']));
+  const json=JSON.stringify(cv.toJSON(['_meta','selectable','evented']));
   history=history.slice(0,histIdx+1);
   history.push(json);
   if(history.length>30)history.shift();
@@ -2172,7 +2280,7 @@ function miClearStroke(){if(!miSel2)return;miSel2.set('stroke','');document.getE
 // 히스토리
 function miSaveHistory(){
   if(!window.miCvObj)return;
-  const json=JSON.stringify(window.miCvObj.toJSON(['_meta']));
+  const json=JSON.stringify(window.miCvObj.toJSON(['_meta','selectable','evented']));
   miHistory2=miHistory2.slice(0,miHistIdx2+1);
   miHistory2.push(json);
   if(miHistory2.length>20)miHistory2.shift();
