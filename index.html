@@ -991,6 +991,7 @@ function doLoad(file){
       document.getElementById('upzone').querySelector('.uptext').innerHTML='<strong style="color:#f5e6c8">'+file.name+'</strong>변경하려면 클릭';
       processed=false;
       setStep(1,'done');updateLayers();updateInfo();updateAutoProcessBtn();
+      saveHistory(); // 원본 업로드 상태를 history[0]으로 저장 → 첫 편집 후 Undo 가능
       // 로드 후 자동 맞춤
       setTimeout(fitZoom, 50);
       // autoProcess(img.width,img.height); // 수동 시작으로 변경
@@ -3846,6 +3847,64 @@ function miExtraBindEvents(){
       // Move confirm buttons
       wrap.style.left=(curSx+dx)+'px';
       wrap.style.top=((curSy+dy)+(parseFloat(overlay.style.height)||0)+6)+'px';
+    }
+  });
+
+  // content-fill box overlay arrow key nudge
+  document.addEventListener('keydown',function(e){
+    if(!_cffPendingRect)return;
+    if(!contentFillMode)return;
+    const tag=(document.activeElement||{}).tagName||'';
+    if(/^(INPUT|TEXTAREA|SELECT)$/.test(tag))return;
+    const arrows=['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
+    if(!arrows.includes(e.key))return;
+    e.preventDefault();
+    const canvasEl=cv.upperCanvasEl||document.getElementById('c');
+    const rect=canvasEl.getBoundingClientRect();
+    const scaleX=cv.width/rect.width;
+    const scaleY=cv.height/rect.height;
+    const overlay=document.getElementById('cf-box-overlay');
+    const wrap=document.getElementById('cf-confirm-wrap');
+    if(e.shiftKey){
+      // Shift+Arrow: resize (extend/shrink width/height from right/bottom edge)
+      const step=2;
+      let dw=0,dh=0;
+      if(e.key==='ArrowRight')dw=step;
+      if(e.key==='ArrowLeft') dw=-step;
+      if(e.key==='ArrowDown') dh=step;
+      if(e.key==='ArrowUp')   dh=-step;
+      const cW=cv.width,cH=cv.height;
+      _cffPendingRect.rawW=Math.max(10,Math.min(_cffPendingRect.rawW+dw*scaleX,cW-_cffPendingRect.rawL));
+      _cffPendingRect.rawH=Math.max(10,Math.min(_cffPendingRect.rawH+dh*scaleY,cH-_cffPendingRect.rawT));
+      const curSw=parseFloat(overlay.style.width)||0;
+      const curSh=parseFloat(overlay.style.height)||0;
+      const curSx=parseFloat(overlay.style.left)||0;
+      const curSy=parseFloat(overlay.style.top)||0;
+      overlay.style.width=Math.max(10,curSw+dw)+'px';
+      overlay.style.height=Math.max(10,curSh+dh)+'px';
+      if(wrap){
+        wrap.style.left=curSx+'px';
+        wrap.style.top=(curSy+(parseFloat(overlay.style.height)||0)+6)+'px';
+      }
+    }else{
+      // Arrow (no shift): move 2px
+      const step=2;
+      let dx=0,dy=0;
+      if(e.key==='ArrowLeft') dx=-step;
+      if(e.key==='ArrowRight')dx=step;
+      if(e.key==='ArrowUp')   dy=-step;
+      if(e.key==='ArrowDown') dy=step;
+      const cW=cv.width,cH=cv.height;
+      _cffPendingRect.rawL=Math.max(0,Math.min(cW-_cffPendingRect.rawW,_cffPendingRect.rawL+dx*scaleX));
+      _cffPendingRect.rawT=Math.max(0,Math.min(cH-_cffPendingRect.rawH,_cffPendingRect.rawT+dy*scaleY));
+      const curSx=parseFloat(overlay.style.left)||0;
+      const curSy=parseFloat(overlay.style.top)||0;
+      overlay.style.left=(curSx+dx)+'px';
+      overlay.style.top=(curSy+dy)+'px';
+      if(wrap){
+        wrap.style.left=(curSx+dx)+'px';
+        wrap.style.top=((curSy+dy)+(parseFloat(overlay.style.height)||0)+6)+'px';
+      }
     }
   });
 
