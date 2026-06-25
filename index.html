@@ -353,20 +353,6 @@ select.pi{cursor:pointer}
   </div>
 
   <div class="right">
-    <!-- [ZOOM] 줌 컨트롤 세로 패널 -->
-    <div class="sec" style="padding:8px 10px">
-      <div class="stitle">보기</div>
-      <div style="display:flex;flex-direction:column;gap:4px;align-items:stretch">
-        <button class="btn undo-btn" onclick="setZoom(zoom+0.05)" title="확대" style="text-align:center;font-size:14px;padding:5px 0">+</button>
-        <span id="zoom-label" style="font-size:10px;color:#888;text-align:center;padding:3px 0;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:4px">100%</span>
-        <button class="btn undo-btn" onclick="setZoom(zoom-0.05)" title="축소" style="text-align:center;font-size:14px;padding:5px 0">−</button>
-        <button class="btn ghost" onclick="fitZoom()" style="font-size:9px;text-align:center;padding:5px 0">맞춤</button>
-        <button class="btn ghost" onclick="setZoom(1)" title="기본 크기로 초기화" style="font-size:9px;text-align:center;padding:5px 0">100%</button>
-        <div style="height:1px;background:#1a1a1a;margin:2px 0"></div>
-        <button class="btn undo-btn" onclick="doUndo()" title="실행취소 Ctrl+Z" style="text-align:center">↩</button>
-        <button class="btn undo-btn" onclick="doRedo()" title="다시실행 Ctrl+Y" style="text-align:center">↪</button>
-      </div>
-    </div>
     <div class="sec">
       <div class="stitle">속성</div>
       <div id="ns" class="ns">요소를 선택하세요
@@ -788,6 +774,19 @@ select.pi{cursor:pointer}
   </div>
 </div>
 
+<!-- [ZOOM] 플로팅 줌 컨트롤 패널 (캔버스와 우측 사이드바 사이) -->
+<div id="zoom-float" style="position:fixed;right:225px;top:50%;transform:translateY(-50%);z-index:100;display:flex;flex-direction:column;gap:3px;align-items:center;background:#141414;border:1px solid #2a2a2a;border-radius:8px;padding:8px 6px;box-shadow:0 4px 16px rgba(0,0,0,0.5)">
+  <button class="btn undo-btn" onclick="setZoom(zoom+0.1)" title="확대 (+)" style="text-align:center;font-size:15px;padding:4px 8px;width:34px">+</button>
+  <span id="zoom-label" style="font-size:10px;color:#f5e6c8;text-align:center;padding:3px 4px;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:4px;min-width:34px;display:block">100%</span>
+  <button class="btn undo-btn" onclick="setZoom(zoom-0.1)" title="축소 (−)" style="text-align:center;font-size:15px;padding:4px 8px;width:34px">−</button>
+  <div style="height:1px;background:#2a2a2a;width:100%;margin:1px 0"></div>
+  <button class="btn ghost" onclick="fitZoom()" title="화면에 맞춤" style="font-size:9px;text-align:center;padding:4px 2px;width:34px">맞춤</button>
+  <button class="btn ghost" onclick="setZoom(1)" title="기본 크기 (100%)" style="font-size:9px;text-align:center;padding:4px 2px;width:34px">100%</button>
+  <div style="height:1px;background:#2a2a2a;width:100%;margin:1px 0"></div>
+  <button class="btn undo-btn" onclick="doUndo()" title="실행취소 Ctrl+Z" style="text-align:center;width:34px">↩</button>
+  <button class="btn undo-btn" onclick="doRedo()" title="다시실행 Ctrl+Y" style="text-align:center;width:34px">↪</button>
+</div>
+
 <div class="sbar">
   <div style="display:flex;align-items:center;gap:5px">
     <div class="sdot" id="sdot"></div>
@@ -884,24 +883,30 @@ let _shiftKey=false,_ctrlKey=false;
 document.addEventListener('keydown',e=>{_shiftKey=e.shiftKey;_ctrlKey=e.ctrlKey||e.metaKey;});
 document.addEventListener('keyup',e=>{_shiftKey=e.shiftKey;_ctrlKey=e.ctrlKey||e.metaKey;});
 
-// [Fix 1] Ctrl+mousewheel zoom centered on mouse pointer
+// [Fix 2] Ctrl+mousewheel zoom — proportional, smooth, pointer-centered
 (function(){
   const midEl=document.getElementById('mid');
   midEl.addEventListener('wheel',function(e){
     if(!(e.ctrlKey||e.metaKey)) return;
     e.preventDefault();
-    const step=0.025;
     const oldZoom=zoom;
-    const newZoom=Math.max(0.1,Math.min(4,parseFloat((oldZoom+(e.deltaY<0?step:-step)).toFixed(3))));
-    if(newZoom===oldZoom) return;
-    // pointer position relative to #mid scroll container
+    // deltaY 크기에 비례한 미세 줌 (고정 step 대신 비례식)
+    const factor=1-e.deltaY*0.0008;
+    const newZoom=Math.max(0.1,Math.min(4,parseFloat((oldZoom*factor).toFixed(4))));
+    if(Math.abs(newZoom-oldZoom)<0.0001) return;
+    // 줌 전 마우스 포인터의 스크롤 기준 절대 좌표 (콘텐츠 좌표)
     const rect=midEl.getBoundingClientRect();
-    const mouseX=e.clientX-rect.left+midEl.scrollLeft;
-    const mouseY=e.clientY-rect.top+midEl.scrollTop;
+    const pointerXInScroll=e.clientX-rect.left+midEl.scrollLeft;
+    const pointerYInScroll=e.clientY-rect.top+midEl.scrollTop;
+    // 줌 적용
     setZoom(newZoom);
-    // adjust scroll so the point under mouse stays in place
-    midEl.scrollLeft=mouseX*(newZoom/oldZoom)-(e.clientX-rect.left);
-    midEl.scrollTop=mouseY*(newZoom/oldZoom)-(e.clientY-rect.top);
+    // DOM 반영 후(requestAnimationFrame) 스크롤 보정
+    requestAnimationFrame(function(){
+      // 줌 비율 변화에 따라 콘텐츠 좌표가 확대된 만큼 스크롤 재계산
+      const scale=newZoom/oldZoom;
+      midEl.scrollLeft=pointerXInScroll*scale-(e.clientX-rect.left);
+      midEl.scrollTop=pointerYInScroll*scale-(e.clientY-rect.top);
+    });
   },{passive:false});
 })();
 
