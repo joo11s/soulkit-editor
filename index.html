@@ -2646,7 +2646,9 @@ function clearAll(){
 function updateLayers(){
   const el=document.getElementById('layers');
   if(!objs.length){el.innerHTML='<div class="empty">레이어 없음</div>';return;}
-  el.innerHTML=objs.map((o,i)=>{
+  const order=objs.map((_,i)=>i).reverse();
+  el.innerHTML=order.map(i=>{
+    const o=objs[i];
     const t=o._meta&&o._meta.type;
     const done=o._meta&&o._meta.translated;
     const label=o.text||(t==='shape'?'도형':'레이어');
