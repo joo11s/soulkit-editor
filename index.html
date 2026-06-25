@@ -356,6 +356,7 @@ select.pi{cursor:pointer}
     <div class="sec">
       <div class="stitle">속성</div>
       <div id="ns" class="ns">요소를 선택하세요
+        <div id="auto-process-wrap" style="margin-top:8px;display:none"><button class="btn primary" style="width:100%;font-size:11px" onclick="startAutoProcess()">✨ 자동 처리 시작</button></div>
         <div style="margin-top:8px"><button id="contentFillBtn" class="btn ai content-fill-btn" style="width:100%;font-size:10px" onclick="toggleContentFillMode()">🪄 콘텐츠 인식 채우기</button></div>
         <!-- 콘텐츠 인식 채우기 인라인 서브패널 -->
         <div id="cf-subpanel" class="tool-subpanel green">
@@ -775,10 +776,10 @@ select.pi{cursor:pointer}
 </div>
 
 <!-- [ZOOM] 플로팅 줌 컨트롤 패널 (캔버스와 우측 사이드바 사이) -->
-<div id="zoom-float" style="position:fixed;right:225px;top:50%;transform:translateY(-50%);z-index:100;display:flex;flex-direction:column;gap:3px;align-items:center;background:#141414;border:1px solid #2a2a2a;border-radius:8px;padding:8px 6px;box-shadow:0 4px 16px rgba(0,0,0,0.5)">
-  <button class="btn undo-btn" onclick="setZoom(zoom+0.1)" title="확대 (+)" style="text-align:center;font-size:15px;padding:4px 8px;width:34px">+</button>
+<div id="zoom-float" style="position:fixed;right:225px;top:80px;z-index:100;display:flex;flex-direction:column;gap:3px;align-items:center;background:#141414;border:1px solid #2a2a2a;border-radius:8px;padding:8px 6px;box-shadow:0 4px 16px rgba(0,0,0,0.5)">
+  <button class="btn undo-btn" onclick="setZoom(zoom+0.05)" title="확대 (+)" style="text-align:center;font-size:15px;padding:4px 8px;width:34px">+</button>
   <span id="zoom-label" style="font-size:10px;color:#f5e6c8;text-align:center;padding:3px 4px;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:4px;min-width:34px;display:block">100%</span>
-  <button class="btn undo-btn" onclick="setZoom(zoom-0.1)" title="축소 (−)" style="text-align:center;font-size:15px;padding:4px 8px;width:34px">−</button>
+  <button class="btn undo-btn" onclick="setZoom(zoom-0.05)" title="축소 (−)" style="text-align:center;font-size:15px;padding:4px 8px;width:34px">−</button>
   <div style="height:1px;background:#2a2a2a;width:100%;margin:1px 0"></div>
   <button class="btn ghost" onclick="fitZoom()" title="화면에 맞춤" style="font-size:9px;text-align:center;padding:4px 2px;width:34px">맞춤</button>
   <button class="btn ghost" onclick="setZoom(1)" title="기본 크기 (100%)" style="font-size:9px;text-align:center;padding:4px 2px;width:34px">100%</button>
@@ -862,7 +863,7 @@ window.onload=()=>{
   });
 };
 
-let cv=null,objs=[],sel=null,loaded=false,origDataUrl=null;
+let cv=null,objs=[],sel=null,loaded=false,origDataUrl=null,processed=false;
 let history=[],histIdx=-1;
 let zoom=1;
 
@@ -988,10 +989,11 @@ function doLoad(file){
       document.getElementById('ph').style.display='none';
       document.getElementById('isize').textContent=W+'×'+H;
       document.getElementById('upzone').querySelector('.uptext').innerHTML='<strong style="color:#f5e6c8">'+file.name+'</strong>변경하려면 클릭';
-      setStep(1,'done');updateLayers();updateInfo();
+      processed=false;
+      setStep(1,'done');updateLayers();updateInfo();updateAutoProcessBtn();
       // 로드 후 자동 맞춤
       setTimeout(fitZoom, 50);
-      autoProcess(img.width,img.height);
+      // autoProcess(img.width,img.height); // 수동 시작으로 변경
     });
   };
   r.readAsDataURL(file);
@@ -1038,6 +1040,19 @@ async function callOpenAITr(text){
   const d=await res.json();
   if(d.error)throw new Error(d.error.message||JSON.stringify(d.error));
   return (d.text||text).trim();
+}
+
+function updateAutoProcessBtn(){
+  const wrap=document.getElementById('auto-process-wrap');
+  if(wrap) wrap.style.display=(loaded&&!processed)?'block':'none';
+}
+async function startAutoProcess(){
+  if(!loaded||processed)return;
+  const img=cv.getObjects().find(o=>!o.selectable);
+  const origW=img?Math.round(img.width*(img.scaleX||1)):CANVAS_W;
+  const origH=img?Math.round(img.height*(img.scaleY||1)):cv.getHeight();
+  processed=true;updateAutoProcessBtn();
+  await autoProcess(origW,origH);
 }
 
 async function autoProcess(origW,origH){
