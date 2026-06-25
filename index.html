@@ -193,26 +193,11 @@ select.pi{cursor:pointer}
 .crop-ratio-btn.on{background:#1a1209;border-color:#f5e6c860;color:#f5e6c8}
 /* ===== 영역 지정 지우기 ===== */
 .spot-erase-btn.active{background:#3d2d6e;color:#c4b5fd;border-color:#7c3aed}
-#spot-erase-banner{display:none;position:fixed;top:58px;left:50%;transform:translateX(-50%);background:rgba(61,45,110,.92);border:1px solid #7c3aed;color:#c4b5fd;font-size:11px;padding:5px 14px;border-radius:6px;z-index:9999;pointer-events:none;white-space:nowrap;letter-spacing:.3px}
-#spot-erase-banner.show{display:block}
+#spot-erase-banner{display:none}
 #spot-drag-overlay{display:none;position:absolute;border:2px dashed #a78bfa;background:rgba(139,92,246,.15);pointer-events:none;z-index:600;box-sizing:border-box}
-#spot-confirm-wrap{
-  display:none;
-  position:absolute;
-  z-index:701;
-  gap:6px;
-  pointer-events:auto;
-}
+#spot-confirm-wrap{display:none;gap:6px;pointer-events:auto}
 #spot-confirm-wrap.show{display:flex}
-.sp-confirm-btn{
-  padding:4px 12px;
-  border-radius:5px;
-  border:none;
-  cursor:pointer;
-  font-size:12px;
-  font-weight:600;
-  box-shadow:0 2px 6px rgba(0,0,0,.4);
-}
+.sp-confirm-btn{padding:4px 12px;border-radius:5px;border:none;cursor:pointer;font-size:12px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,.4)}
 .sp-confirm-btn.sp-run{background:#7c3aed;color:#fff}
 .sp-confirm-btn.sp-cancel{background:#374151;color:#d1d5db}
 .sp-resize-handle{position:absolute;width:8px;height:8px;background:#fff;border:1px solid #7c3aed;border-radius:1px;z-index:610;pointer-events:auto;box-sizing:border-box}
@@ -222,16 +207,15 @@ select.pi{cursor:pointer}
 .sp-resize-handle.se{bottom:-4px;right:-4px;cursor:se-resize}
 /* ===== 콘텐츠 인식 채우기 ===== */
 .content-fill-btn.active{background:#14532d!important;color:#86efac!important;border-color:#16a34a!important}
-#content-fill-banner{display:none;position:fixed;top:58px;left:50%;transform:translateX(-50%);background:rgba(14,52,20,.92);border:1px solid #16a34a;color:#86efac;font-size:11px;padding:5px 14px;border-radius:6px;z-index:9999;pointer-events:auto;white-space:nowrap;letter-spacing:.3px;align-items:center;gap:8px}
-#content-fill-banner.show{display:flex}
-#content-fill-done-btn{display:none;background:#16a34a;color:#fff;font-size:12px;font-weight:bold;padding:4px 14px;border-radius:6px;border:none;cursor:pointer;box-shadow:0 2px 8px rgba(0,0,0,.45);white-space:nowrap;margin-left:8px}
-#content-fill-cancel-btn{display:none;background:rgba(255,255,255,.15);color:#86efac;font-size:12px;font-weight:bold;padding:4px 10px;border-radius:6px;border:1px solid #16a34a;cursor:pointer;white-space:nowrap;margin-left:4px}
+#content-fill-banner{display:none}
+#content-fill-done-btn{display:none}
+#content-fill-cancel-btn{display:none}
 /* 콘텐츠 인식 채우기 - 모드 토글 */
-.cf-mode-btn{background:rgba(255,255,255,.1);border:1px solid #16a34a40;color:#86efac;font-size:11px;padding:3px 9px;border-radius:4px;cursor:pointer;transition:all .15s;font-family:'Noto Sans KR',sans-serif}
+.cf-mode-btn{background:#0a0a0a;border:1px solid #14532d;color:#86efac;font-size:11px;padding:3px 9px;border-radius:4px;cursor:pointer;transition:all .15s;font-family:'Noto Sans KR',sans-serif}
 .cf-mode-btn.active{background:#16a34a;color:#fff;border-color:#16a34a}
 /* 콘텐츠 인식 채우기 - 박스 오버레이 */
 #cf-box-overlay{display:none;position:absolute;border:2px dashed #86efac;background:rgba(22,163,74,.15);pointer-events:none;z-index:600;box-sizing:border-box}
-#cf-confirm-wrap{display:none;position:absolute;z-index:701;gap:6px;pointer-events:auto}
+#cf-confirm-wrap{display:none;gap:6px;pointer-events:auto}
 #cf-confirm-wrap.show{display:flex}
 .cf-confirm-btn{padding:4px 12px;border-radius:5px;border:none;cursor:pointer;font-size:12px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,.4)}
 .cf-confirm-btn.cf-run{background:#16a34a;color:#fff}
@@ -241,16 +225,27 @@ select.pi{cursor:pointer}
 .cf-resize-handle.ne{top:-4px;right:-4px;cursor:ne-resize}
 .cf-resize-handle.sw{bottom:-4px;left:-4px;cursor:sw-resize}
 .cf-resize-handle.se{bottom:-4px;right:-4px;cursor:se-resize}
-/* ===== 모양/크기 컨트롤 패널 ===== */
-#shape-size-ctrl{display:none;position:fixed;top:96px;left:50%;transform:translateX(-50%);background:rgba(15,15,25,.92);border:1px solid #3d2d6e;border-radius:8px;padding:6px 12px;z-index:9998;pointer-events:auto;align-items:center;gap:8px;white-space:nowrap}
-#shape-size-ctrl.show{display:flex}
-#shape-size-ctrl.green{border-color:#16a34a}
+/* ===== 모양/크기 컨트롤 패널 (floating 제거 - 패널 내 인라인) ===== */
+#shape-size-ctrl{display:none}
 .shape-toggle-btn{background:#1a1a2e;border:1px solid #3d2d6e;color:#a78bfa;font-size:11px;padding:3px 10px;border-radius:5px;cursor:pointer;transition:all .15s}
 .shape-toggle-btn.active{background:#3d2d6e;color:#c4b5fd;border-color:#7c3aed}
-#shape-size-ctrl.green .shape-toggle-btn{border-color:#14532d;color:#86efac}
-#shape-size-ctrl.green .shape-toggle-btn.active{background:#14532d;border-color:#16a34a;color:#86efac}
-.shape-size-label{font-size:10px;color:#888;margin-left:4px}
+.shape-size-label{font-size:10px;color:#888}
 .shape-size-val{font-size:10px;color:#aaa;min-width:26px;text-align:right}
+/* ===== 인라인 서브패널 (영역 지정 지우기 / 콘텐츠 인식 채우기) ===== */
+.tool-subpanel{display:none;margin-top:6px;background:#0d0d1a;border:1px solid #2a2a3a;border-radius:6px;padding:8px 10px}
+.tool-subpanel.show{display:block}
+.tool-subpanel.green{border-color:#14532d;background:#0a1a0e}
+.subpanel-hint{font-size:10px;color:#888;line-height:1.6;margin-bottom:6px}
+.subpanel-hint.purple{color:#a78bfa}
+.subpanel-hint.green{color:#86efac}
+.subpanel-row{display:flex;align-items:center;gap:5px;margin-bottom:5px;flex-wrap:wrap}
+.subpanel-confirm-row{display:flex;gap:5px;margin-top:6px}
+.sp-shape-btn{background:#1a1a2e;border:1px solid #3d2d6e;color:#a78bfa;font-size:11px;padding:3px 10px;border-radius:5px;cursor:pointer;transition:all .15s;flex:1;text-align:center}
+.sp-shape-btn.active{background:#3d2d6e;color:#c4b5fd;border-color:#7c3aed}
+.cf-shape-btn{background:#0a1a0e;border:1px solid #14532d;color:#86efac;font-size:11px;padding:3px 10px;border-radius:5px;cursor:pointer;transition:all .15s;flex:1;text-align:center}
+.cf-shape-btn.active{background:#14532d;color:#86efac;border-color:#16a34a}
+.subpanel-slider{flex:1;accent-color:#a78bfa}
+.subpanel-slider.green{accent-color:#16a34a}
 
 </style>
 </head>
@@ -345,25 +340,8 @@ select.pi{cursor:pointer}
     </div>
     <div id="wrap" style="position:relative">
       <canvas id="c"></canvas>
-      <div id="spot-erase-banner">🎯 지울 영역을 드래그로 선택하세요</div>
       <div id="spot-drag-overlay"></div>
-      <div id="spot-confirm-wrap">
-        <button class="sp-confirm-btn sp-run" onclick="_spConfirmRun()">✅ 실행</button>
-        <button class="sp-confirm-btn sp-cancel" onclick="_spConfirmCancel()">✕ 취소</button>
-      </div>
-      <div id="content-fill-banner">🪄 콘텐츠 인식 채우기 <button class="cf-mode-btn active" id="cf-mode-brush" onclick="_cfSetMode('brush')">🖌 브러시</button><button class="cf-mode-btn" id="cf-mode-box" onclick="_cfSetMode('box')">⬜ 박스</button><span id="cf-mode-hint" style="margin-left:4px">지울 영역을 브러시로 칠하세요 | Alt+휠로 브러시 크기 조절</span><button id="content-fill-done-btn" onclick="contentAwareFill()">✅ 실행</button><button id="content-fill-cancel-btn" onclick="_cfCancelMask()">✕ 취소</button></div>
       <div id="cf-box-overlay"></div>
-      <div id="cf-confirm-wrap">
-        <button class="cf-confirm-btn cf-run" onclick="_cffConfirmRun()">✅ 실행</button>
-        <button class="cf-confirm-btn cf-cancel" onclick="_cffConfirmCancel()">✕ 취소</button>
-      </div>
-      <div id="shape-size-ctrl">
-        <button class="shape-toggle-btn active" id="shape-btn-rect" onclick="_setShape('rect')">⬜ 사각형</button>
-        <button class="shape-toggle-btn" id="shape-btn-circle" onclick="_setShape('circle')">⭕ 원형</button>
-        <span class="shape-size-label">크기</span>
-        <input type="range" min="8" max="60" value="14" id="shape-size-slider" oninput="_onShapeSizeSlider()" style="width:70px;accent-color:#a78bfa">
-        <span class="shape-size-val" id="shape-size-val">14px</span>
-      </div>
       <div class="ov" id="ov">
         <div class="pix-office">
           <div class="pix-char-wrap">
@@ -385,7 +363,52 @@ select.pi{cursor:pointer}
       <div class="stitle">속성</div>
       <div id="ns" class="ns">요소를 선택하세요
         <div style="margin-top:8px"><button id="contentFillBtn" class="btn ai content-fill-btn" style="width:100%;font-size:10px" onclick="toggleContentFillMode()">🪄 콘텐츠 인식 채우기</button></div>
+        <!-- 콘텐츠 인식 채우기 인라인 서브패널 -->
+        <div id="cf-subpanel" class="tool-subpanel green">
+          <div class="subpanel-hint green" id="cf-hint-text">지울 영역을 브러시로 칠하세요</div>
+          <div class="subpanel-row">
+            <button class="cf-mode-btn active" id="cf-mode-brush" onclick="_cfSetMode('brush')">🖌 브러시</button>
+            <button class="cf-mode-btn" id="cf-mode-box" onclick="_cfSetMode('box')">⬜ 박스</button>
+          </div>
+          <div class="subpanel-row">
+            <span class="shape-size-label" style="color:#86efac">모양</span>
+            <button class="cf-shape-btn active" id="cf-shape-rect" onclick="_setShape('rect')">⬜ 사각</button>
+            <button class="cf-shape-btn" id="cf-shape-circle" onclick="_setShape('circle')">⭕ 원형</button>
+          </div>
+          <div class="subpanel-row">
+            <span class="shape-size-label" style="color:#86efac">크기</span>
+            <input type="range" min="8" max="60" value="14" id="cf-size-slider" oninput="_onCfSizeSlider()" class="subpanel-slider green" style="flex:1">
+            <span class="shape-size-val" id="cf-size-val">14px</span>
+          </div>
+          <div id="cf-panel-confirm" class="subpanel-confirm-row" style="display:none">
+            <div id="cf-confirm-wrap" style="display:none;gap:5px">
+              <button class="cf-confirm-btn cf-run" onclick="_cffConfirmRun()">✅ 실행</button>
+              <button class="cf-confirm-btn cf-cancel" onclick="_cffConfirmCancel()">✕ 취소</button>
+            </div>
+            <button id="content-fill-done-btn" style="display:none;flex:1;background:#16a34a;color:#fff;font-size:11px;font-weight:bold;padding:5px;border-radius:5px;border:none;cursor:pointer" onclick="contentAwareFill()">✅ 실행</button>
+            <button id="content-fill-cancel-btn" style="display:none;flex:1;background:#374151;color:#d1d5db;font-size:11px;font-weight:bold;padding:5px;border-radius:5px;border:1px solid #4b5563;cursor:pointer" onclick="_cfCancelMask()">✕ 취소</button>
+          </div>
+        </div>
         <div style="margin-top:4px"><button id="spotEraseBtn" class="btn ai spot-erase-btn" style="width:100%;font-size:10px" onclick="toggleSpotEraseMode()">🎯 영역 지정 지우기</button></div>
+        <!-- 영역 지정 지우기 인라인 서브패널 -->
+        <div id="sp-subpanel" class="tool-subpanel">
+          <div class="subpanel-hint purple">드래그로 지울 영역을 선택하세요</div>
+          <div class="subpanel-row">
+            <button class="sp-shape-btn active" id="sp-shape-rect" onclick="_setSpShape('rect')">⬜ 사각형</button>
+            <button class="sp-shape-btn" id="sp-shape-circle" onclick="_setSpShape('circle')">⭕ 원형</button>
+          </div>
+          <div class="subpanel-row">
+            <span class="shape-size-label">크기</span>
+            <input type="range" min="8" max="60" value="14" id="sp-size-slider" oninput="_onSpSizeSlider()" class="subpanel-slider" style="flex:1">
+            <span class="shape-size-val" id="sp-size-val">14px</span>
+          </div>
+          <div id="sp-panel-confirm" class="subpanel-confirm-row" style="display:none">
+            <div id="spot-confirm-wrap" style="display:none;gap:5px">
+              <button class="sp-confirm-btn sp-run" onclick="_spConfirmRun()">✅ 실행</button>
+              <button class="sp-confirm-btn sp-cancel" onclick="_spConfirmCancel()">✕ 취소</button>
+            </div>
+          </div>
+        </div>
         <div style="margin-top:4px"><button class="btn ai" style="width:100%;font-size:10px" onclick="removeTextAgain()">✂ 중국어 텍스트 다시 지우기</button></div>
       </div>
       <div id="props" style="display:none">
@@ -1195,32 +1218,51 @@ let _shapeSize=14;
 
 function _showShapeCtrl(mode){
   _activeMode=mode;
-  const ctrl=document.getElementById('shape-size-ctrl');
-  ctrl.classList.add('show');
-  if(mode==='contentFill'){ctrl.classList.add('green');}else{ctrl.classList.remove('green');}
   _syncShapeCtrl();
 }
 function _hideShapeCtrl(){
   _activeMode=null;
-  const ctrl=document.getElementById('shape-size-ctrl');
-  ctrl.classList.remove('show');
 }
 function _syncShapeCtrl(){
-  document.getElementById('shape-btn-rect').classList.toggle('active',_shapeType==='rect');
-  document.getElementById('shape-btn-circle').classList.toggle('active',_shapeType==='circle');
-  document.getElementById('shape-size-slider').value=_shapeSize;
-  document.getElementById('shape-size-val').textContent=_shapeSize+'px';
+  // Sync spot erase panel shape buttons
+  const spRect=document.getElementById('sp-shape-rect');
+  const spCircle=document.getElementById('sp-shape-circle');
+  if(spRect)spRect.classList.toggle('active',_shapeType==='rect');
+  if(spCircle)spCircle.classList.toggle('active',_shapeType==='circle');
+  const spSlider=document.getElementById('sp-size-slider');
+  const spVal=document.getElementById('sp-size-val');
+  if(spSlider)spSlider.value=_shapeSize;
+  if(spVal)spVal.textContent=_shapeSize+'px';
+  // Sync content fill panel shape buttons
+  const cfRect=document.getElementById('cf-shape-rect');
+  const cfCircle=document.getElementById('cf-shape-circle');
+  if(cfRect)cfRect.classList.toggle('active',_shapeType==='rect');
+  if(cfCircle)cfCircle.classList.toggle('active',_shapeType==='circle');
+  const cfSlider=document.getElementById('cf-size-slider');
+  const cfVal=document.getElementById('cf-size-val');
+  if(cfSlider)cfSlider.value=_shapeSize;
+  if(cfVal)cfVal.textContent=_shapeSize+'px';
 }
 function _setShape(type){
   _shapeType=type;
   _syncShapeCtrl();
-  // contentFill 브러시 크기 동기화
   if(_activeMode==='contentFill') _cfBrushSize=_shapeSize;
 }
+function _setSpShape(type){
+  _shapeType=type;
+  _syncShapeCtrl();
+}
 function _onShapeSizeSlider(){
-  _shapeSize=parseInt(document.getElementById('shape-size-slider').value);
-  document.getElementById('shape-size-val').textContent=_shapeSize+'px';
-  if(_activeMode==='contentFill') _cfBrushSize=_shapeSize;
+  // Legacy: no longer called (shape-size-slider removed). Use _onSpSizeSlider/_onCfSizeSlider instead.
+}
+function _onSpSizeSlider(){
+  _shapeSize=parseInt(document.getElementById('sp-size-slider').value);
+  _syncShapeCtrl();
+}
+function _onCfSizeSlider(){
+  _shapeSize=parseInt(document.getElementById('cf-size-slider').value);
+  _syncShapeCtrl();
+  _cfBrushSize=_shapeSize;
 }
 
 // ── 콘텐츠 인식 채우기 (OpenCV.js inpaint) ──
@@ -1258,17 +1300,16 @@ function toggleContentFillMode(){
   if(!loaded){toast('이미지를 먼저 업로드하세요','err');return;}
   contentFillMode=!contentFillMode;
   const btn=document.getElementById('contentFillBtn');
-  const banner=document.getElementById('content-fill-banner');
-  const doneBtn=document.getElementById('content-fill-done-btn');
+  const subpanel=document.getElementById('cf-subpanel');
   if(contentFillMode){
     btn.classList.add('active');
-    banner.classList.add('show');
+    subpanel.classList.add('show');
     cv.selection=false;
     cv.skipTargetFind=true;
     cv.discardActiveObject();cv.requestRenderAll();
     _showShapeCtrl('contentFill');
     const bgObj=cv.getObjects().find(o=>!o.selectable);
-    if(!bgObj){toast('배경 이미지가 없습니다','err');contentFillMode=false;btn.classList.remove('active');banner.classList.remove('show');return;}
+    if(!bgObj){toast('배경 이미지가 없습니다','err');contentFillMode=false;btn.classList.remove('active');subpanel.classList.remove('show');return;}
     // 마스크 캔버스 (배경 이미지 원본 크기)
     const srcEl=bgObj._element||bgObj._originalElement;
     const bgNatW=srcEl.naturalWidth||srcEl.width;
@@ -1287,14 +1328,13 @@ function toggleContentFillMode(){
     _cfMode='brush';
     document.getElementById('cf-mode-brush').classList.add('active');
     document.getElementById('cf-mode-box').classList.remove('active');
-    document.getElementById('cf-mode-hint').textContent='지울 영역을 브러시로 칠하세요 | Alt+휠로 브러시 크기 조절';
-    doneBtn.style.display='block';
+    document.getElementById('cf-hint-text').textContent='지울 영역을 브러시로 칠하세요';
+    // 패널 확인 버튼 표시
+    const panelConfirm=document.getElementById('cf-panel-confirm');
+    if(panelConfirm)panelConfirm.style.display='flex';
+    document.getElementById('content-fill-done-btn').style.display='block';
     document.getElementById('content-fill-cancel-btn').style.display='block';
-    // 박스 오버레이/확인 버튼을 wrap 안으로 이동
-    const cfBoxOverlay=document.getElementById('cf-box-overlay');
-    const cfConfirmWrap=document.getElementById('cf-confirm-wrap');
-    if(cfBoxOverlay.parentNode!==wrap)wrap.appendChild(cfBoxOverlay);
-    if(cfConfirmWrap.parentNode!==wrap)wrap.appendChild(cfConfirmWrap);
+    document.getElementById('cf-confirm-wrap').style.display='none';
     const canvasEl=cv.upperCanvasEl||document.getElementById('c');
     canvasEl.addEventListener('mousedown',_cfMouseDown);
     canvasEl.addEventListener('mousemove',_cfMouseMove);
@@ -1308,12 +1348,14 @@ function toggleContentFillMode(){
 function _cfExitMode(){
   contentFillMode=false;_cfDrawing=false;
   const btn=document.getElementById('contentFillBtn');
-  const banner=document.getElementById('content-fill-banner');
-  const doneBtn=document.getElementById('content-fill-done-btn');
+  const subpanel=document.getElementById('cf-subpanel');
   btn.classList.remove('active');
-  banner.classList.remove('show');
-  doneBtn.style.display='none';
+  subpanel.classList.remove('show');
+  document.getElementById('content-fill-done-btn').style.display='none';
   document.getElementById('content-fill-cancel-btn').style.display='none';
+  document.getElementById('cf-confirm-wrap').style.display='none';
+  const panelConfirm=document.getElementById('cf-panel-confirm');
+  if(panelConfirm)panelConfirm.style.display='none';
   cv.selection=true;
   cv.skipTargetFind=false;
   _hideShapeCtrl();
@@ -1329,7 +1371,6 @@ function _cfExitMode(){
   cfBoxOverlay.style.pointerEvents='none';
   cfBoxOverlay.removeEventListener('mousedown',_cffOverlayMoveStart);
   _cffRemoveResizeHandles();
-  document.getElementById('cf-confirm-wrap').classList.remove('show');
   _cfMode='brush';
   const canvasEl=cv.upperCanvasEl||document.getElementById('c');
   canvasEl.removeEventListener('mousedown',_cfMouseDown);
@@ -1429,7 +1470,7 @@ function _cfSetMode(mode){
   _cfMode=mode;
   const brushBtn=document.getElementById('cf-mode-brush');
   const boxBtn=document.getElementById('cf-mode-box');
-  const hint=document.getElementById('cf-mode-hint');
+  const hintEl=document.getElementById('cf-hint-text');
   const doneBtn=document.getElementById('content-fill-done-btn');
   const cancelBtn=document.getElementById('content-fill-cancel-btn');
   const canvasEl=cv.upperCanvasEl||document.getElementById('c');
@@ -1437,9 +1478,10 @@ function _cfSetMode(mode){
   if(mode==='brush'){
     brushBtn.classList.add('active');
     boxBtn.classList.remove('active');
-    hint.textContent='지울 영역을 브러시로 칠하세요 | Alt+휠로 브러시 크기 조절';
-    doneBtn.style.display='block';
-    cancelBtn.style.display='block';
+    if(hintEl)hintEl.textContent='지울 영역을 브러시로 칠하세요 (Alt+휠: 크기 조절)';
+    if(doneBtn)doneBtn.style.display='block';
+    if(cancelBtn)cancelBtn.style.display='block';
+    document.getElementById('cf-confirm-wrap').style.display='none';
     // Remove box listeners, add brush listeners
     canvasEl.removeEventListener('mousedown',_cffMouseDown);
     canvasEl.removeEventListener('mousemove',_cffMouseMove);
@@ -1452,9 +1494,9 @@ function _cfSetMode(mode){
   } else {
     boxBtn.classList.add('active');
     brushBtn.classList.remove('active');
-    hint.textContent='지울 영역을 박스로 드래그하세요';
-    doneBtn.style.display='none';
-    cancelBtn.style.display='none';
+    if(hintEl)hintEl.textContent='지울 영역을 박스로 드래그하세요';
+    if(doneBtn)doneBtn.style.display='none';
+    if(cancelBtn)cancelBtn.style.display='none';
     // Remove brush listeners, add box listeners
     canvasEl.removeEventListener('mousedown',_cfMouseDown);
     canvasEl.removeEventListener('mousemove',_cfMouseMove);
@@ -1529,12 +1571,13 @@ function _cffMouseUp(e){
 function _cffShowConfirmBtns(){
   const overlay=document.getElementById('cf-box-overlay');
   const wrap=document.getElementById('cf-confirm-wrap');
-  const oLeft=parseFloat(overlay.style.left)||0;
-  const oTop=parseFloat(overlay.style.top)||0;
-  const oH=parseFloat(overlay.style.height)||0;
-  wrap.style.left=oLeft+'px';
-  wrap.style.top=(oTop+oH+6)+'px';
-  wrap.classList.add('show');
+  const panelConfirm=document.getElementById('cf-panel-confirm');
+  // Show confirm in the panel
+  if(panelConfirm)panelConfirm.style.display='flex';
+  if(wrap){wrap.style.display='flex';wrap.classList.add('show');}
+  // Hide brush action buttons while showing box confirm
+  document.getElementById('content-fill-done-btn').style.display='none';
+  document.getElementById('content-fill-cancel-btn').style.display='none';
   overlay.style.pointerEvents='auto';
   overlay.addEventListener('mousedown',_cffOverlayMoveStart);
   _cffUpdateResizeHandles();
@@ -1542,7 +1585,7 @@ function _cffShowConfirmBtns(){
 
 function _cffHideConfirmBtns(){
   const wrap=document.getElementById('cf-confirm-wrap');
-  wrap.classList.remove('show');
+  if(wrap){wrap.classList.remove('show');wrap.style.display='none';}
   const overlay=document.getElementById('cf-box-overlay');
   overlay.style.pointerEvents='none';
   overlay.removeEventListener('mousedown',_cffOverlayMoveStart);
@@ -1599,7 +1642,7 @@ function _cffConfirmRun(){
   document.getElementById('content-fill-cancel-btn').style.display='block';
   document.getElementById('cf-mode-brush').classList.add('active');
   document.getElementById('cf-mode-box').classList.remove('active');
-  document.getElementById('cf-mode-hint').textContent='지울 영역을 브러시로 칠하세요 | Alt+휠로 브러시 크기 조절';
+  const hintRefEl=document.getElementById('cf-hint-text');if(hintRefEl)hintRefEl.textContent='지울 영역을 브러시로 칠하세요 (Alt+휠: 크기 조절)';
   // Ensure brush listeners active
   const canvasEl=cv.upperCanvasEl||document.getElementById('c');
   canvasEl.removeEventListener('mousedown',_cffMouseDown);
@@ -1644,9 +1687,6 @@ function _cffOverlayMoving(e){
   const newSy=_cffMoveState.startSy+dy/zoom;
   overlay.style.left=newSx+'px';
   overlay.style.top=newSy+'px';
-  const wrap=document.getElementById('cf-confirm-wrap');
-  wrap.style.left=newSx+'px';
-  wrap.style.top=(newSy+(parseFloat(overlay.style.height)||0)+6)+'px';
   _cffPendingRect.rawL=_cffMoveState.startRawL+dx*_cffMoveState.scaleX;
   _cffPendingRect.rawT=_cffMoveState.startRawT+dy*_cffMoveState.scaleY;
 }
@@ -1713,8 +1753,6 @@ function _cffResizeHandleMoving(e){
   const overlay=document.getElementById('cf-box-overlay');
   overlay.style.left=newSx+'px';overlay.style.top=newSy+'px';
   overlay.style.width=newSw+'px';overlay.style.height=newSh+'px';
-  const wrap=document.getElementById('cf-confirm-wrap');
-  wrap.style.left=newSx+'px';wrap.style.top=(newSy+newSh+6)+'px';
   if(corner==='nw'){
     _cffPendingRect.rawL=startRawL+dx*scaleX;_cffPendingRect.rawT=startRawT+dy*scaleY;
     _cffPendingRect.rawW=Math.max(10,startRawW-dx*scaleX);_cffPendingRect.rawH=Math.max(10,startRawH-dy*scaleY);
@@ -1819,23 +1857,20 @@ function toggleSpotEraseMode(){
   if(!loaded){toast('이미지를 먼저 업로드하세요','err');return;}
   spotEraseMode=!spotEraseMode;
   const btn=document.getElementById('spotEraseBtn');
-  const banner=document.getElementById('spot-erase-banner');
+  const subpanel=document.getElementById('sp-subpanel');
   const overlay=document.getElementById('spot-drag-overlay');
   if(spotEraseMode){
     btn.classList.add('active');
-    banner.classList.add('show');
+    subpanel.classList.add('show');
     cv.selection=false;
     cv.skipTargetFind=true;
     cv.discardActiveObject();cv.requestRenderAll();
     _showShapeCtrl('spotErase');
     // 드래그 이벤트 등록
     const canvasEl=cv.upperCanvasEl||document.getElementById('c');
-    // Fix overlay parent so its position:absolute is relative to canvas container
-    const canvasContainer=canvasEl.parentNode;
-    const overlayEl=document.getElementById('spot-drag-overlay');
-    const confirmWrap=document.getElementById('spot-confirm-wrap');
-    if(overlayEl.parentNode!==canvasContainer)canvasContainer.appendChild(overlayEl);
-    if(confirmWrap.parentNode!==canvasContainer)canvasContainer.appendChild(confirmWrap);
+    // overlay는 #wrap 기준 absolute 배치
+    const wrapEl=document.getElementById('wrap');
+    if(overlay.parentNode!==wrapEl)wrapEl.appendChild(overlay);
     canvasEl.addEventListener('mousedown',_spMouseDown);
     canvasEl.addEventListener('mousemove',_spMouseMove);
     canvasEl.addEventListener('mouseup',_spMouseUp);
@@ -1849,10 +1884,10 @@ function _spExitMode(){
   _spHideConfirmBtns();
   spotEraseMode=false;
   const btn=document.getElementById('spotEraseBtn');
-  const banner=document.getElementById('spot-erase-banner');
+  const subpanel=document.getElementById('sp-subpanel');
   const overlay=document.getElementById('spot-drag-overlay');
   btn.classList.remove('active');
-  banner.classList.remove('show');
+  subpanel.classList.remove('show');
   overlay.style.display='none';
   cv.selection=true;
   cv.skipTargetFind=false;
@@ -1934,19 +1969,11 @@ function _spMouseUp(e){
 
 function _spShowConfirmBtns(){
   const overlay=document.getElementById('spot-drag-overlay');
-  const wrap=document.getElementById('spot-confirm-wrap');
-  const oLeft=parseFloat(overlay.style.left)||0;
-  const oTop=parseFloat(overlay.style.top)||0;
-  const oH=parseFloat(overlay.style.height)||0;
-  const oW=parseFloat(overlay.style.width)||0;
-  // Position buttons below the overlay (or above if near bottom)
-  const canvasEl=cv.upperCanvasEl||document.getElementById('c');
-  const cRect=canvasEl.getBoundingClientRect();
-  const btnY=oTop+oH+6;
-  const btnX=oLeft;
-  wrap.style.left=btnX+'px';
-  wrap.style.top=btnY+'px';
-  wrap.classList.add('show');
+  const confirmWrap=document.getElementById('spot-confirm-wrap');
+  const panelConfirm=document.getElementById('sp-panel-confirm');
+  // Show confirm in the panel
+  if(panelConfirm)panelConfirm.style.display='flex';
+  if(confirmWrap)confirmWrap.style.display='flex';
   // Allow overlay movement (pointer-events on overlay is now auto during pending)
   overlay.style.pointerEvents='auto';
   overlay.addEventListener('mousedown',_spOverlayMoveStart);
@@ -1954,8 +1981,10 @@ function _spShowConfirmBtns(){
   _spUpdateResizeHandles();
 }
 function _spHideConfirmBtns(){
-  const wrap=document.getElementById('spot-confirm-wrap');
-  wrap.classList.remove('show');
+  const confirmWrap=document.getElementById('spot-confirm-wrap');
+  const panelConfirm=document.getElementById('sp-panel-confirm');
+  if(confirmWrap)confirmWrap.style.display='none';
+  if(panelConfirm)panelConfirm.style.display='none';
   const overlay=document.getElementById('spot-drag-overlay');
   overlay.style.pointerEvents='none';
   overlay.removeEventListener('mousedown',_spOverlayMoveStart);
@@ -2009,10 +2038,6 @@ function _spOverlayMoving(e){
   const newSy=_spMoveState.startSy+dy/zoom;
   overlay.style.left=newSx+'px';
   overlay.style.top=newSy+'px';
-  // Update confirm buttons position
-  const wrap=document.getElementById('spot-confirm-wrap');
-  wrap.style.left=newSx+'px';
-  wrap.style.top=(newSy+(parseFloat(overlay.style.height)||0)+6)+'px';
   // Update canvas coordinates
   _spPendingRect.rawL=_spMoveState.startRawL+dx*_spMoveState.scaleX;
   _spPendingRect.rawT=_spMoveState.startRawT+dy*_spMoveState.scaleY;
@@ -2087,10 +2112,6 @@ function _spResizeHandleMoving(e){
   overlay.style.top=newSy+'px';
   overlay.style.width=newSw+'px';
   overlay.style.height=newSh+'px';
-  // reposition confirm buttons
-  const wrap=document.getElementById('spot-confirm-wrap');
-  wrap.style.left=newSx+'px';
-  wrap.style.top=(newSy+newSh+6)+'px';
   // update raw canvas coords
   if(corner==='nw'){
     _spPendingRect.rawL=startRawL+dx*scaleX;
