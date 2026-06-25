@@ -48,6 +48,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:#0f0f0f;color:#e8e8e8;heig
 .lt{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#666}
 .lx{color:#2a2a2a;font-size:12px;cursor:pointer}
 .lx:hover{color:#f87171}
+.lvis{color:#444;font-size:10px;cursor:pointer;flex-shrink:0;line-height:1;user-select:none}
+.lvis:hover{color:#ccc}
+.lvis.lhid{color:#222}
+.layer-ord{color:#2a2a2a;font-size:9px;cursor:pointer;flex-shrink:0;line-height:1;padding:0 1px;user-select:none}
+.layer-ord:hover{color:#f5e6c8}
+.li.drag-over{background:#1a1209;border-color:#f5e6c8}
 .empty{color:#2a2a2a;font-size:10px;text-align:center;padding:8px 0;line-height:1.6}
 .step-row{display:flex;align-items:flex-start;gap:5px;font-size:10px;padding:2px 0}
 .sn{color:#f5e6c8;font-weight:700;min-width:12px}
@@ -455,9 +461,11 @@ select.pi{cursor:pointer}
               <button class="ab" id="al-right" onclick="setAl('right')">→</button>
             </div>
           </div>
-          <!-- [FIX 6] 텍스트 박스 둥근 모서리 -->
-          <div class="pr">
-            <label class="pl">박스 둥글기 (radius)</label>
+        </div>
+        <!-- 도형 전용 속성 -->
+        <div id="shape-props" style="display:none">
+          <div class="pr" id="shape-radius-row" style="display:none">
+            <label class="pl">둥글기 (radius)</label>
             <div class="sr">
               <input type="range" min="0" max="60" value="0" id="pradius" oninput="sp('radius')">
               <input type="number" class="px-input" id="pradiusn" min="0" max="60" value="0" onchange="sp('radiusn')">
@@ -492,6 +500,46 @@ select.pi{cursor:pointer}
           <div class="sr">
             <input type="range" min="0" max="100" value="100" id="popacity" oninput="sp('opacity')">
             <span class="sv" id="popacityv">100%</span>
+          </div>
+        </div>
+        <!-- 그림자 (텍스트·도형 공통) -->
+        <div id="shadow-props" style="display:none">
+          <div class="div"></div>
+          <div class="pr">
+            <label class="pl" style="display:flex;align-items:center;gap:5px;cursor:pointer">
+              <input type="checkbox" id="shadow-enabled" onchange="spShadow('toggle')" style="accent-color:#f5e6c8">
+              그림자
+            </label>
+          </div>
+          <div id="shadow-controls" style="display:none">
+            <div class="pr">
+              <label class="pl">색상</label>
+              <div class="cr">
+                <div class="cs" id="sw-shadow" onclick="document.getElementById('shadow-color').click()" style="background:#000000"></div>
+                <input type="color" id="shadow-color" value="#000000" oninput="spShadow('color')">
+              </div>
+            </div>
+            <div class="pr">
+              <label class="pl">흐림 (blur)</label>
+              <div class="sr">
+                <input type="range" min="0" max="30" value="0" id="shadow-blur" oninput="spShadow('blur')">
+                <span class="sv" id="shadow-blurv">0</span>
+              </div>
+            </div>
+            <div class="pr">
+              <label class="pl">위치 X</label>
+              <div class="sr">
+                <input type="range" min="-20" max="20" value="0" id="shadow-ox" oninput="spShadow('ox')">
+                <span class="sv" id="shadow-oxv">0</span>
+              </div>
+            </div>
+            <div class="pr">
+              <label class="pl">위치 Y</label>
+              <div class="sr">
+                <input type="range" min="-20" max="20" value="0" id="shadow-oy" oninput="spShadow('oy')">
+                <span class="sv" id="shadow-oyv">0</span>
+              </div>
+            </div>
           </div>
         </div>
         <div class="div"></div>
@@ -865,6 +913,7 @@ window.onload=()=>{
 
 let cv=null,objs=[],sel=null,loaded=false,origDataUrl=null,processed=false;
 let history=[],histIdx=-1;
+let _layerDragIdx=null;
 let zoom=1;
 
 function setZoom(z){
@@ -2430,7 +2479,11 @@ function onSel(){
   document.getElementById('ns').style.display='none';
   document.getElementById('props').style.display='block';
   const isText=o.type==='textbox';
+  const isShape=o._meta?.type==='shape';
   document.getElementById('text-props').style.display=isText?'block':'none';
+  document.getElementById('shape-props').style.display=isShape?'block':'none';
+  document.getElementById('shape-radius-row').style.display=(o.type==='rect')?'block':'none';
+  document.getElementById('shadow-props').style.display=(isText||isShape)?'block':'none';
   syncP();hilite(o);
 }
 function onDesel(){sel=null;document.getElementById('ns').style.display='block';document.getElementById('props').style.display='none';}
@@ -2450,10 +2503,6 @@ function syncP(){
     document.getElementById('pchex').value=tc;
     ['left','center','right'].forEach(a=>document.getElementById('al-'+a).classList.remove('on'));
     document.getElementById('al-'+(sel.textAlign||'left')).classList.add('on');
-    // [FIX 6] radius 동기화 (Textbox는 직접 지원 안 해서 _meta로 관리)
-    const rv=sel._meta?.radius||0;
-    document.getElementById('pradius').value=rv;
-    document.getElementById('pradiusn').value=rv;
   } else if(sel.type==='rect'){
     // rect(둥근사각)는 rx를 직접 읽어 슬라이더 동기화
     const rv=sel.rx||sel._meta?.radius||0;
@@ -2471,6 +2520,7 @@ function syncP(){
   const op=Math.round((sel.opacity||1)*100);
   document.getElementById('popacity').value=op;
   document.getElementById('popacityv').textContent=op+'%';
+  syncShadow(sel);
 }
 
 function sp(t){
@@ -2509,7 +2559,6 @@ function sp(t){
   cv.requestRenderAll();
 }
 
-// [FIX 6] Textbox에 둥근 모서리 적용 - afterRender로 오버레이
 function applyRadius(obj,r){
   if(!obj)return;
   if(obj.type==='rect'){
@@ -2517,17 +2566,6 @@ function applyRadius(obj,r){
     obj._meta.radius=r;
     obj.set({rx:r,ry:r});
     return;
-  }
-  if(obj.type!=='textbox')return;
-  if(!obj._meta)obj._meta={};
-  obj._meta.radius=r;
-  // Fabric Textbox는 natively radius 미지원 → clipPath로 구현
-  if(r>0){
-    const w=obj.width,h=obj.getScaledHeight?obj.getScaledHeight():obj.height||40;
-    const clip=new fabric.Rect({width:w+obj.padding*2,height:h+obj.padding*2,rx:r,ry:r,left:-(w/2+obj.padding),top:-(h/2+obj.padding)});
-    obj.set('clipPath',clip);
-  } else {
-    obj.set('clipPath',null);
   }
 }
 
@@ -2614,18 +2652,139 @@ function updateLayers(){
     const label=o.text||(t==='shape'?'도형':'레이어');
     const p=label.slice(0,13)+(label.length>13?'…':'');
     const dotClass=t==='shape'?'shape':(done?'done':'');
-    return `<div class="li" id="li-${i}" onclick="cv.setActiveObject(objs[${i}]);cv.requestRenderAll()">
+    const vis=o.visible!==false;
+    return `<div class="li" id="li-${i}" draggable="true"
+      ondragstart="layerDragStart(event,${i})"
+      ondragover="event.preventDefault();this.classList.add('drag-over')"
+      ondragleave="this.classList.remove('drag-over')"
+      ondrop="layerDrop(event,${i});this.classList.remove('drag-over')"
+      onclick="layerSelect(${i})">
+      <span class="lvis${vis?'':' lhid'}" onclick="event.stopPropagation();layerToggleVis(${i})" title="${vis?'숨기기':'보이기'}">${vis?'●':'○'}</span>
       <div class="ld ${dotClass}"></div>
       <span class="lt">${p}</span>
-      <span class="lx" onclick="event.stopPropagation();objs[${i}]&&(cv.remove(objs[${i}]),objs.splice(${i},1),cv.requestRenderAll(),onDesel(),updateLayers(),updateInfo())">×</span>
+      <span class="layer-ord" onclick="event.stopPropagation();layerToFront(${i})" title="맨 앞으로">▲</span>
+      <span class="layer-ord" onclick="event.stopPropagation();layerToBack(${i})" title="맨 뒤로">▼</span>
+      <span class="lx" onclick="event.stopPropagation();layerDelete(${i})">×</span>
     </div>`;
   }).join('');
+}
+
+function layerSelect(i){
+  if(!objs[i])return;
+  cv.setActiveObject(objs[i]);
+  onSel();
+  cv.requestRenderAll();
+}
+
+function layerDragStart(e,i){
+  _layerDragIdx=i;
+  e.dataTransfer.effectAllowed='move';
+}
+
+function layerDrop(e,targetIdx){
+  e.preventDefault();
+  document.querySelectorAll('.li').forEach(el=>el.classList.remove('drag-over'));
+  if(_layerDragIdx===null||_layerDragIdx===targetIdx){_layerDragIdx=null;return;}
+  const srcIdx=_layerDragIdx;
+  _layerDragIdx=null;
+  const moved=objs.splice(srcIdx,1)[0];
+  objs.splice(targetIdx,0,moved);
+  // Rebuild canvas z-order: remove all selectables then re-add in new order
+  objs.forEach(o=>cv.remove(o));
+  objs.forEach(o=>cv.add(o));
+  cv.requestRenderAll();
+  updateLayers();
+  saveHistory();
+}
+
+function layerToggleVis(i){
+  if(!objs[i])return;
+  objs[i].set('visible',!objs[i].visible);
+  cv.requestRenderAll();
+  updateLayers();
+  saveHistory();
+}
+
+function layerToFront(i){
+  if(!objs[i])return;
+  const obj=objs.splice(i,1)[0];
+  objs.push(obj);
+  cv.bringToFront(obj);
+  cv.requestRenderAll();
+  updateLayers();
+  saveHistory();
+}
+
+function layerToBack(i){
+  if(!objs[i])return;
+  const obj=objs.splice(i,1)[0];
+  objs.unshift(obj);
+  // Place just above the bottommost non-selectable object (background)
+  const allCanvas=cv.getObjects();
+  const nonSels=allCanvas.filter(o=>!o.selectable);
+  const targetIdx=nonSels.length>0?(allCanvas.indexOf(nonSels[nonSels.length-1])+1):0;
+  cv.moveTo(obj,targetIdx);
+  cv.requestRenderAll();
+  updateLayers();
+  saveHistory();
+}
+
+function layerDelete(i){
+  if(!objs[i])return;
+  cv.remove(objs[i]);
+  objs.splice(i,1);
+  cv.requestRenderAll();
+  onDesel();
+  updateLayers();
+  updateInfo();
+  saveHistory();
 }
 function hilite(o){
   document.querySelectorAll('.li').forEach(e=>e.classList.remove('on'));
   const i=objs.indexOf(o);if(i>=0){const e=document.getElementById('li-'+i);if(e)e.classList.add('on');}
 }
 function updateInfo(){document.getElementById('icnt').textContent=objs.length;}
+
+function syncShadow(obj){
+  if(!obj)return;
+  const s=obj.shadow;
+  const hasS=!!s;
+  document.getElementById('shadow-enabled').checked=hasS;
+  document.getElementById('shadow-controls').style.display=hasS?'block':'none';
+  if(s){
+    const c=typeof s.color==='string'?s.color:'#000000';
+    document.getElementById('shadow-color').value=c;
+    document.getElementById('sw-shadow').style.background=c;
+    document.getElementById('shadow-blur').value=s.blur||0;
+    document.getElementById('shadow-blurv').textContent=s.blur||0;
+    document.getElementById('shadow-ox').value=s.offsetX||0;
+    document.getElementById('shadow-oxv').textContent=s.offsetX||0;
+    document.getElementById('shadow-oy').value=s.offsetY||0;
+    document.getElementById('shadow-oyv').textContent=s.offsetY||0;
+  } else {
+    document.getElementById('shadow-blur').value=0;document.getElementById('shadow-blurv').textContent=0;
+    document.getElementById('shadow-ox').value=0;document.getElementById('shadow-oxv').textContent=0;
+    document.getElementById('shadow-oy').value=0;document.getElementById('shadow-oyv').textContent=0;
+  }
+}
+
+function spShadow(t){
+  if(!sel)return;
+  const enabled=document.getElementById('shadow-enabled').checked;
+  document.getElementById('shadow-controls').style.display=enabled?'block':'none';
+  if(!enabled){sel.set('shadow',null);cv.requestRenderAll();return;}
+  const color=document.getElementById('shadow-color').value;
+  const blur=parseInt(document.getElementById('shadow-blur').value)||0;
+  const ox=parseInt(document.getElementById('shadow-ox').value)||0;
+  const oy=parseInt(document.getElementById('shadow-oy').value)||0;
+  if(t==='color')document.getElementById('sw-shadow').style.background=color;
+  if(t==='blur')document.getElementById('shadow-blurv').textContent=blur;
+  if(t==='ox')document.getElementById('shadow-oxv').textContent=ox;
+  if(t==='oy')document.getElementById('shadow-oyv').textContent=oy;
+  sel.set('shadow',new fabric.Shadow({color,blur,offsetX:ox,offsetY:oy}));
+  cv.requestRenderAll();
+}
+
 function setStep(n,state,msg){
   const el=document.getElementById('s'+n);
   const defaults=['이미지 업로드 대기','텍스트 위치 감지','텍스트 제거','한국어 번역 삽입'];
