@@ -1088,16 +1088,19 @@ async function autoProcess(origW,origH){
       const scY=cv.getHeight()/cleanImg.height;
       cleanImg.set({left:0,top:0,scaleX:scX,scaleY:scY,selectable:false,evented:false});
       const bg=cv.getObjects().find(o=>!o.selectable);
+      _historyLock=true;
       if(bg)cv.remove(bg);
       cv.add(cleanImg);cv.sendToBack(cleanImg);
       objs.forEach(o=>cv.bringToFront(o));
       cv.requestRenderAll();
+      _historyLock=false;
+      saveHistory();
     },{crossOrigin:'anonymous'});
   }catch(e){
     setStep(3,'err','제거 실패: '+e.message);
     toast('텍스트 제거 실패 (번역은 완료됨)','err');
   }
-  hideOv();toast('1차 제거 완료 — 남은 텍스트가 있으면 아래 도구로 보정하세요','ok');setStatus('완료','ok');saveHistory();
+  hideOv();toast('1차 제거 완료 — 남은 텍스트가 있으면 아래 도구로 보정하세요','ok');setStatus('완료','ok');
 }
 
 async function uploadR2(dataUrl,filename,mimeType){
