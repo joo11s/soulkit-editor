@@ -272,12 +272,6 @@ select.pi{cursor:pointer}
       <button class="mi-dl-btn" onclick="miDownload()">↓ 저장</button>
       <button class="mi-dl-btn" onclick="miDownloadWeb()" style="background:#5b4fcf;color:#e0d9ff">↓ 웹용 PNG</button>
     </div>
-    <button class="btn undo-btn" onclick="doUndo()" title="실행취소 Ctrl+Z">↩</button>
-    <button class="btn undo-btn" onclick="doRedo()" title="다시실행 Ctrl+Y">↪</button>
-    <button class="btn undo-btn" onclick="setZoom(zoom-0.1)" title="축소">−</button>
-    <span id="zoom-label" style="font-size:10px;color:#888;min-width:36px;text-align:center">100%</span>
-    <button class="btn undo-btn" onclick="setZoom(zoom+0.1)" title="확대">+</button>
-    <button class="btn ghost" onclick="fitZoom()" style="font-size:9px">맞춤</button>
     <button class="btn ghost" onclick="clearAll()" style="font-size:10px">초기화</button>
     <button class="btn ghost" onclick="saveJPG()" style="font-size:10px">JPG</button>
     <button class="btn primary" onclick="savePNG()">↓ PNG</button>
@@ -359,6 +353,20 @@ select.pi{cursor:pointer}
   </div>
 
   <div class="right">
+    <!-- [ZOOM] 줌 컨트롤 세로 패널 -->
+    <div class="sec" style="padding:8px 10px">
+      <div class="stitle">보기</div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:stretch">
+        <button class="btn undo-btn" onclick="setZoom(zoom+0.05)" title="확대" style="text-align:center;font-size:14px;padding:5px 0">+</button>
+        <span id="zoom-label" style="font-size:10px;color:#888;text-align:center;padding:3px 0;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:4px">100%</span>
+        <button class="btn undo-btn" onclick="setZoom(zoom-0.05)" title="축소" style="text-align:center;font-size:14px;padding:5px 0">−</button>
+        <button class="btn ghost" onclick="fitZoom()" style="font-size:9px;text-align:center;padding:5px 0">맞춤</button>
+        <button class="btn ghost" onclick="setZoom(1)" title="기본 크기로 초기화" style="font-size:9px;text-align:center;padding:5px 0">100%</button>
+        <div style="height:1px;background:#1a1a1a;margin:2px 0"></div>
+        <button class="btn undo-btn" onclick="doUndo()" title="실행취소 Ctrl+Z" style="text-align:center">↩</button>
+        <button class="btn undo-btn" onclick="doRedo()" title="다시실행 Ctrl+Y" style="text-align:center">↪</button>
+      </div>
+    </div>
     <div class="sec">
       <div class="stitle">속성</div>
       <div id="ns" class="ns">요소를 선택하세요
@@ -860,7 +868,7 @@ let history=[],histIdx=-1;
 let zoom=1;
 
 function setZoom(z){
-  zoom=Math.max(0.2,Math.min(2,parseFloat(z.toFixed(1))));
+  zoom=Math.max(0.1,Math.min(4,parseFloat(z.toFixed(2))));
   document.getElementById('wrap').style.transform=`scale(${zoom})`;
   document.getElementById('zoom-label').textContent=Math.round(zoom*100)+'%';
 }
@@ -875,6 +883,27 @@ function fitZoom(){
 let _shiftKey=false,_ctrlKey=false;
 document.addEventListener('keydown',e=>{_shiftKey=e.shiftKey;_ctrlKey=e.ctrlKey||e.metaKey;});
 document.addEventListener('keyup',e=>{_shiftKey=e.shiftKey;_ctrlKey=e.ctrlKey||e.metaKey;});
+
+// [Fix 1] Ctrl+mousewheel zoom centered on mouse pointer
+(function(){
+  const midEl=document.getElementById('mid');
+  midEl.addEventListener('wheel',function(e){
+    if(!(e.ctrlKey||e.metaKey)) return;
+    e.preventDefault();
+    const step=0.025;
+    const oldZoom=zoom;
+    const newZoom=Math.max(0.1,Math.min(4,parseFloat((oldZoom+(e.deltaY<0?step:-step)).toFixed(3))));
+    if(newZoom===oldZoom) return;
+    // pointer position relative to #mid scroll container
+    const rect=midEl.getBoundingClientRect();
+    const mouseX=e.clientX-rect.left+midEl.scrollLeft;
+    const mouseY=e.clientY-rect.top+midEl.scrollTop;
+    setZoom(newZoom);
+    // adjust scroll so the point under mouse stays in place
+    midEl.scrollLeft=mouseX*(newZoom/oldZoom)-(e.clientX-rect.left);
+    midEl.scrollTop=mouseY*(newZoom/oldZoom)-(e.clientY-rect.top);
+  },{passive:false});
+})();
 
 function initCanvas(){
   cv=new fabric.Canvas('c',{preserveObjectStacking:true});
