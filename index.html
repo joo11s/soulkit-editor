@@ -2359,7 +2359,7 @@ function addRect(){
 function addRoundRect(){
   if(!loaded)return;
   const r=new fabric.Rect({left:50,top:50,width:150,height:60,fill:'rgba(255,107,53,0.3)',stroke:'#f5e6c8',strokeWidth:2,rx:12,ry:12,borderColor:'#f5e6c8',cornerColor:'#f5e6c8',cornerSize:7,transparentCorners:false});
-  r._meta={type:'shape'};cv.add(r);cv.setActiveObject(r);objs.push(r);updateLayers();updateInfo();saveHistory();
+  r._meta={type:'shape',radius:12};cv.add(r);cv.setActiveObject(r);objs.push(r);updateLayers();updateInfo();saveHistory();
 }
 function addCircle(){
   if(!loaded)return;
@@ -2454,6 +2454,11 @@ function syncP(){
     const rv=sel._meta?.radius||0;
     document.getElementById('pradius').value=rv;
     document.getElementById('pradiusn').value=rv;
+  } else if(sel.type==='rect'){
+    // rect(둥근사각)는 rx를 직접 읽어 슬라이더 동기화
+    const rv=sel.rx||sel._meta?.radius||0;
+    document.getElementById('pradius').value=rv;
+    document.getElementById('pradiusn').value=rv;
   }
   const bg=isText?(sel.backgroundColor||''):(sel.fill||'');
   document.getElementById('pkbg').value=bg||'#000000';
@@ -2506,7 +2511,14 @@ function sp(t){
 
 // [FIX 6] Textbox에 둥근 모서리 적용 - afterRender로 오버레이
 function applyRadius(obj,r){
-  if(!obj||obj.type!=='textbox')return;
+  if(!obj)return;
+  if(obj.type==='rect'){
+    if(!obj._meta)obj._meta={};
+    obj._meta.radius=r;
+    obj.set({rx:r,ry:r});
+    return;
+  }
+  if(obj.type!=='textbox')return;
   if(!obj._meta)obj._meta={};
   obj._meta.radius=r;
   // Fabric Textbox는 natively radius 미지원 → clipPath로 구현
