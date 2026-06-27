@@ -4798,10 +4798,10 @@ async function qdGenerate(idx){
     let roleNote='Image 1 is the main product photo — this exact product must remain unchanged in shape, color, and detail.';
     if(sec.ref){
       images.push(toImg(sec.ref));
-      roleNote+=' Image 2 is a background style reference — strongly and clearly apply its mood, color palette, lighting, and background style (not its content/product) to the new background. Do not just hint at it subtly — make the resulting background visually similar in style to this reference.';
+      roleNote+=' Image 2 is a reference image. Use it however the user\'s instructions below specify — this may mean matching its background/mood/color/lighting style only, or it may mean incorporating elements shown in it (such as a model/person, pose, or composition) into the result. Follow the user\'s instructions below precisely on how to use this reference image.';
     }
     const userPrompt=sec.prompt||'Create a professional product photo';
-    const fullPrompt=`${roleNote}\n\nTask: ${userPrompt}\n\nRemove all existing text and watermarks. Do not add any new text. Keep the main product exactly as is, only change the background.\nMake it look like professional studio product photography for premium e-commerce advertising — soft realistic lighting, natural shadows and reflections, sharp focus, high detail, photorealistic.\n4K.`;
+    const fullPrompt=`${roleNote}\n\nTask: ${userPrompt}\n\nRemove any existing text or watermarks from the original product photo unless the instructions below explicitly ask you to add or keep specific text. Follow the user's instructions below precisely regarding any text — if they ask you to add text, add exactly that text. Keep the main product exactly as is, only change the background.\nMake it look like professional studio product photography for premium e-commerce advertising — soft realistic lighting, natural shadows and reflections, sharp focus, high detail, photorealistic.\n4K.`;
     const payload={images,prompt:fullPrompt,temperature:0.85+Math.random()*0.15};
     const res=await fetch(GEMINI_EDIT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const data=await res.json();
@@ -4863,10 +4863,10 @@ async function qdRegenerateFromModal(){
     let roleNote='Image 1 is the main product photo — this exact product must remain unchanged in shape, color, and detail.';
     if(sec.ref){
       images.push(toImg(sec.ref));
-      roleNote+=' Image 2 is a background style reference — strongly and clearly apply its mood, color palette, lighting, and background style (not its content/product) to the new background. Do not just hint at it subtly — make the resulting background visually similar in style to this reference.';
+      roleNote+=' Image 2 is a reference image. Use it however the user\'s instructions below specify — this may mean matching its background/mood/color/lighting style only, or it may mean incorporating elements shown in it (such as a model/person, pose, or composition) into the result. Follow the user\'s instructions below precisely on how to use this reference image.';
     }
     const userPrompt=sec.prompt||'Create a professional product photo';
-    const fullPrompt=`${roleNote}\n\nTask: ${userPrompt}\n\nRemove all existing text and watermarks. Do not add any new text. Keep the main product exactly as is, only change the background.\nMake it look like professional studio product photography for premium e-commerce advertising — soft realistic lighting, natural shadows and reflections, sharp focus, high detail, photorealistic.\n4K.`;
+    const fullPrompt=`${roleNote}\n\nTask: ${userPrompt}\n\nRemove any existing text or watermarks from the original product photo unless the instructions below explicitly ask you to add or keep specific text. Follow the user's instructions below precisely regarding any text — if they ask you to add text, add exactly that text. Keep the main product exactly as is, only change the background.\nMake it look like professional studio product photography for premium e-commerce advertising — soft realistic lighting, natural shadows and reflections, sharp focus, high detail, photorealistic.\n4K.`;
     const payload={images,prompt:fullPrompt,temperature:0.85+Math.random()*0.15};
     const res=await fetch(GEMINI_EDIT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
     const data=await res.json();
@@ -4891,15 +4891,21 @@ function qdSendToEditor(){
   if(!sec.result)return;
   if(!cv){toast('에디터 캔버스가 초기화되지 않았습니다','err');return;}
   fabric.Image.fromURL(sec.result,function(img){
-    const W=cv.width||CANVAS_W;
-    const sc=W/img.width;
-    img.set({left:0,top:0,scaleX:sc,scaleY:sc});
+    const W=CANVAS_W;
+    const H=Math.round(img.height*(W/img.width));
+    const scX=W/img.width;
+    const scY=H/img.height;
+    cv.setWidth(W);cv.setHeight(H);
+    img.set({left:0,top:0,scaleX:scX,scaleY:scY,selectable:false,evented:false});
     img._meta={type:'image'};
-    cv.add(img);
-    cv.sendToBack(img);
-    objs.push(img);
-    if(typeof updateLayers==='function') updateLayers();
-    cv.requestRenderAll();
+    cv.clear();cv.add(img);cv.sendToBack(img);cv.requestRenderAll();
+    objs=[];loaded=true;history=[];histIdx=-1;
+    document.getElementById('wrap').style.display='block';
+    document.getElementById('ph').style.display='none';
+    document.getElementById('isize').textContent=W+'×'+H;
+    processed=false;
+    setStep(1,'done');updateLayers();updateInfo();updateAutoProcessBtn();saveHistory();
+    setTimeout(fitZoom,50);
   });
   qdCloseModal();
   switchTab('editor');
