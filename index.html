@@ -960,7 +960,7 @@ select.pi{cursor:pointer}
       <div class="qd-modal-loading" id="qd-modal-loading">⏳ 생성 중...</div>
     </div>
     <div class="qd-modal-result-actions" id="qd-modal-result-actions">
-      <textarea class="qd-modal-prompt" id="qd-modal-prompt" placeholder="프롬프트를 입력하세요..."></textarea>
+      <textarea class="qd-modal-prompt" id="qd-modal-prompt" placeholder="예) 제품은 원본 그대로 유지하고, 참고이미지의 여성 모델로 교체(원본의 남성 모델 대신)해서 양손은 허리에 올린 뒷모습 포즈로, 가방은 원본처럼 어깨에 메고 있는 모습으로. 배경은 워터파크로. 화면 중앙에 흰색 세리프체로 'WATERPROOF' / 'DRY BAG' 두 줄 텍스트 추가, 배경은 톤 낮춰서 글자 잘 보이게."></textarea>
       <div class="qd-modal-actions-row">
         <button class="qd-modal-regen-btn" id="qd-modal-regen-btn" onclick="qdRegenerateFromModal()">🔄 재생성</button>
         <button class="qd-modal-send-btn" onclick="qdSendToEditor()">📋 상세페이지 에디터로 보내기</button>
@@ -4737,7 +4737,7 @@ function qdRenderSections(){
       <div class="qd-cell cell-prompt">
         <textarea class="qd-prompt-input"
                   id="qd-prompt-${idx}"
-                  placeholder="프롬프트 입력 (선택사항)..."
+                  placeholder="예) 제품 원본 유지, 참고이미지 여성 모델로 교체(원본 남성→여성), 양손 허리 뒷모습 포즈, 가방 어깨에 메고, 배경 워터파크, 중앙 흰색 세리프체 'WATERPROOF / DRY BAG' 텍스트 추가, 배경 톤 다운"
                   oninput="qdSections[${idx}].prompt=this.value">${sec.prompt}</textarea>
       </div>
       <div class="qd-cell cell-result">
