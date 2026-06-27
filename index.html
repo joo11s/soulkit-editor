@@ -986,6 +986,11 @@ select.pi{cursor:pointer}
         <button class="qd-modal-regen-btn" id="qd-modal-regen-btn" onclick="qdRegenerateFromModal()">🔄 재생성</button>
         <button class="qd-modal-send-btn" onclick="qdSendToEditor()">📋 상세페이지 에디터로 보내기</button>
       </div>
+      <div class="qd-modal-actions-row" style="margin-top:8px">
+        <button class="qd-modal-regen-btn" onclick="qdDownloadResult('jpg')">↓ JPG 저장</button>
+        <button class="qd-modal-regen-btn" onclick="qdDownloadResult('png')">↓ PNG 저장</button>
+        <button class="qd-modal-regen-btn" onclick="qdDownloadResult('web')" style="background:#5b4fcf;color:#e0d9ff">↓ 웹용 PNG 저장</button>
+      </div>
     </div>
   </div>
 </div>
@@ -4713,14 +4718,14 @@ function qdRenderSections(){
 
     // Row 1: 공급사 원본
     const origCellContent=sec.orig
-      ?`<img class="qd-cell-img" src="${sec.orig}" onclick="qdOpenModal(${idx},'orig')">
+      ?`<img class="qd-cell-img" src="${sec.orig}" onclick="event.stopPropagation();qdOpenModal(${idx},'orig')">
         <button class="qd-cell-clear" onclick="event.stopPropagation();qdClearSlot(${idx},'orig')">×</button>`
       :`<div class="qd-upload-ico">📦</div>
         <div class="qd-upload-label">공급사 원본<br><span class="qd-required-dot">*필수</span></div>`;
 
     // Row 2: 참고 이미지
     const refCellContent=sec.ref
-      ?`<img class="qd-cell-img" src="${sec.ref}" onclick="qdOpenModal(${idx},'ref')">
+      ?`<img class="qd-cell-img" src="${sec.ref}" onclick="event.stopPropagation();qdOpenModal(${idx},'ref')">
         <button class="qd-cell-clear" onclick="event.stopPropagation();qdClearSlot(${idx},'ref')">×</button>`
       :`<div class="qd-upload-ico">🌅</div>
         <div class="qd-upload-label">참고 이미지<br><span style="color:#444">선택</span></div>`;
@@ -4931,6 +4936,41 @@ function qdSendToEditor(){
   qdCloseModal();
   switchTab('editor');
   toast('상세페이지 에디터로 전송됨','ok');
+}
+
+function qdDownloadResult(format){
+  const idx=qdModalSectionIdx;
+  if(idx<0||idx>=qdSections.length)return;
+  const sec=qdSections[idx];
+  if(!sec.result){toast('저장할 결과 이미지가 없습니다','err');return;}
+  const ts=Date.now();
+  const sectionNum=idx+1;
+  if(format==='web'){
+    const img=new Image();img.crossOrigin='anonymous';
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+      canvas.getContext('2d').drawImage(img,0,0);
+      downloadWebPng(canvas,'happybiz_quickdesign_웹용_'+sectionNum+'_'+ts+'.png');
+      toast('웹용 PNG 저장 완료','ok');
+    };
+    img.src=sec.result;
+  } else {
+    const mimeType=format==='jpg'?'image/jpeg':'image/png';
+    const ext=format==='jpg'?'jpg':'png';
+    const img=new Image();img.crossOrigin='anonymous';
+    img.onload=()=>{
+      const canvas=document.createElement('canvas');
+      canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;
+      canvas.getContext('2d').drawImage(img,0,0);
+      const url=canvas.toDataURL(mimeType,format==='jpg'?0.92:1);
+      const a=document.createElement('a');a.href=url;
+      a.download='happybiz_quickdesign_'+sectionNum+'_'+ts+'.'+ext;
+      a.click();
+      toast(ext.toUpperCase()+' 저장 완료','ok');
+    };
+    img.src=sec.result;
+  }
 }
 </script>
 </body>
