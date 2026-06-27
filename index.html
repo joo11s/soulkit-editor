@@ -262,6 +262,78 @@ select.pi{cursor:pointer}
 .subpanel-slider{flex:1;accent-color:#a78bfa}
 .subpanel-slider.green{accent-color:#16a34a}
 
+/* ===== 퀵 디자인 탭 ===== */
+.qd-main{display:none;flex:1;overflow:hidden;flex-direction:column}
+.qd-main.show{display:flex}
+.qd-layout{display:flex;flex:1;overflow:hidden}
+.qd-row-labels{display:flex;flex-direction:column;width:76px;flex-shrink:0;background:#111;border-right:1px solid #1a1a1a;z-index:10}
+.qd-label-spacer{height:38px;flex-shrink:0;border-bottom:1px solid #1a1a1a}
+.qd-row-label{display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#666;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #1a1a1a;text-align:center;padding:4px 2px;flex-shrink:0}
+.qd-row-label.row-orig{height:160px}
+.qd-row-label.row-ref{height:160px}
+.qd-row-label.row-prompt{height:90px}
+.qd-row-label.row-result{flex:1;min-height:180px}
+.qd-sections-scroll{flex:1;overflow-x:auto;overflow-y:hidden;display:flex;align-items:stretch}
+.qd-sections{display:flex;min-height:100%}
+.qd-section{width:190px;flex-shrink:0;border-right:1px solid #1a1a1a;display:flex;flex-direction:column}
+.qd-section-header{height:38px;display:flex;align-items:center;padding:0 8px;background:#141414;border-bottom:1px solid #1a1a1a;flex-shrink:0;gap:6px}
+.qd-section-name{font-size:11px;font-weight:600;color:#aaa;flex:1}
+.qd-section-del{background:transparent;border:none;color:#333;font-size:15px;cursor:pointer;line-height:1;padding:2px 4px;border-radius:3px}
+.qd-section-del:hover{color:#f87171;background:#1a0a0a}
+.qd-cell{border-bottom:1px solid #1a1a1a;display:flex;flex-direction:column;position:relative;overflow:hidden}
+.qd-cell.cell-orig{height:160px;flex-shrink:0}
+.qd-cell.cell-ref{height:160px;flex-shrink:0}
+.qd-cell.cell-prompt{height:90px;flex-shrink:0;padding:6px}
+.qd-cell.cell-result{flex:1;min-height:180px;display:flex;flex-direction:column}
+.qd-upload-zone{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
+.qd-upload-zone:hover{background:#1a1a1a}
+.qd-upload-zone.has-image{background:#0a0a0a}
+.qd-upload-zone input{display:none}
+.qd-upload-ico{font-size:20px;color:#2a2a2a;margin-bottom:4px}
+.qd-upload-label{font-size:9px;color:#444;letter-spacing:1px;text-transform:uppercase;text-align:center;line-height:1.4}
+.qd-required-dot{color:#f5e6c8;font-size:10px}
+.qd-cell-img{width:100%;height:100%;object-fit:contain;display:block;position:absolute;inset:0;cursor:zoom-in}
+.qd-cell-clear{position:absolute;top:3px;right:3px;background:rgba(0,0,0,.7);border:1px solid #333;border-radius:3px;color:#777;font-size:10px;width:18px;height:18px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2;line-height:1}
+.qd-cell-clear:hover{color:#f87171}
+.qd-prompt-input{width:100%;height:100%;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:4px;color:#e8e8e8;font-size:10px;padding:5px 7px;outline:none;resize:none;font-family:'Noto Sans KR',sans-serif;line-height:1.5}
+.qd-prompt-input:focus{border-color:#f5e6c8}
+.qd-result-area{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;position:relative;overflow:hidden;background:#090909;min-height:0;cursor:default}
+.qd-result-area.has-result{cursor:zoom-in}
+.qd-result-area.has-result:hover .qd-result-overlay{opacity:1}
+.qd-result-placeholder{display:flex;flex-direction:column;align-items:center;gap:5px}
+.qd-result-placeholder-ico{font-size:24px;color:#1a1a1a}
+.qd-result-placeholder-txt{font-size:9px;color:#222;text-align:center;line-height:1.5}
+.qd-result-img{width:100%;height:100%;object-fit:contain;display:block;position:absolute;inset:0}
+.qd-result-overlay{position:absolute;inset:0;background:rgba(0,0,0,.4);opacity:0;transition:opacity .2s;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.qd-result-overlay-txt{font-size:10px;color:#fff;letter-spacing:1px}
+.qd-gen-btn-wrap{padding:5px 6px;background:#111;border-top:1px solid #1a1a1a;flex-shrink:0}
+.qd-gen-btn{width:100%;background:#f5e6c8;color:#000;font-weight:700;border:none;border-radius:4px;padding:6px;font-size:11px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.qd-gen-btn:hover:not(:disabled){background:#ff8555}
+.qd-gen-btn:disabled{opacity:.4;cursor:not-allowed}
+.qd-gen-btn.loading{background:#a78bfa;color:#1a1a2e;animation:pulse .9s infinite}
+.qd-add-section{width:68px;flex-shrink:0;display:flex;align-items:flex-start;justify-content:center;padding-top:52px}
+.qd-add-btn{background:#0a0a0a;border:1px dashed #2a2a2a;border-radius:6px;color:#555;font-size:11px;padding:10px 6px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s;writing-mode:vertical-rl;text-orientation:mixed;white-space:nowrap;letter-spacing:2px}
+.qd-add-btn:hover{border-color:#f5e6c8;color:#f5e6c8;background:#1a1209}
+.qd-modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.92);z-index:9800;align-items:center;justify-content:center;flex-direction:column}
+.qd-modal.show{display:flex}
+.qd-modal-inner{position:relative;display:flex;flex-direction:column;align-items:center;max-width:90vw}
+.qd-modal-close{position:absolute;top:-14px;right:-14px;background:#1a1a1a;border:1px solid #333;border-radius:50%;color:#888;font-size:16px;width:28px;height:28px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;z-index:10}
+.qd-modal-close:hover{color:#f87171;border-color:#f87171}
+.qd-modal-img-wrap{position:relative;line-height:0}
+.qd-modal-img{max-width:80vw;max-height:62vh;object-fit:contain;border-radius:6px;display:block;box-shadow:0 8px 32px rgba(0,0,0,.8)}
+.qd-modal-result-actions{display:none;margin-top:12px;width:80vw;max-width:600px}
+.qd-modal-result-actions.show{display:block}
+.qd-modal-prompt{width:100%;background:#0a0a0a;border:1px solid #1a1a1a;border-radius:4px;color:#e8e8e8;font-size:11px;padding:7px 9px;outline:none;resize:none;height:68px;font-family:'Noto Sans KR',sans-serif;line-height:1.6}
+.qd-modal-prompt:focus{border-color:#f5e6c8}
+.qd-modal-actions-row{display:flex;gap:8px;margin-top:8px}
+.qd-modal-regen-btn{flex:1;background:#f5e6c8;color:#000;font-weight:700;border:none;border-radius:5px;padding:8px;font-size:11px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.qd-modal-regen-btn:hover:not(:disabled){background:#ff8555}
+.qd-modal-regen-btn:disabled{opacity:.4;cursor:not-allowed}
+.qd-modal-send-btn{flex:1;background:#5b4fcf;color:#e0d9ff;font-weight:700;border:none;border-radius:5px;padding:8px;font-size:11px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
+.qd-modal-send-btn:hover{background:#7c6fe0;color:#fff}
+.qd-modal-loading{position:absolute;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;border-radius:6px;color:#a78bfa;font-size:12px;font-family:'Space Mono',monospace;letter-spacing:1px}
+.qd-modal-loading.show{display:flex}
+
 </style>
 </head>
 <body>
@@ -298,6 +370,7 @@ select.pi{cursor:pointer}
 <div class="tab-bar" style="align-items:center">
   <button class="tab-btn active" id="tab-editor" onclick="switchTab('editor')">📋 상세페이지 에디터</button>
   <button class="tab-btn" id="tab-main" onclick="switchTab('main')">🖼️ 메인이미지 생성</button>
+  <button class="tab-btn" id="tab-quick" onclick="switchTab('quick')">⚡ 퀵 디자인</button>
   <div style="flex:1"></div>
   <!-- 정렬 툴바 -->
   <div id="align-toolbar" style="display:flex;align-items:center;gap:4px;padding:0 10px">
@@ -859,6 +932,43 @@ select.pi{cursor:pointer}
   </div>
 </div>
 
+<!-- ===== 퀵 디자인 탭 ===== -->
+<div class="qd-main" id="tab-quick-content">
+  <div class="qd-layout">
+    <div class="qd-row-labels">
+      <div class="qd-label-spacer"></div>
+      <div class="qd-row-label row-orig">공급사<br>원본</div>
+      <div class="qd-row-label row-ref">참고<br>이미지</div>
+      <div class="qd-row-label row-prompt">프롬프트</div>
+      <div class="qd-row-label row-result">결과</div>
+    </div>
+    <div class="qd-sections-scroll">
+      <div class="qd-sections" id="qd-sections"></div>
+      <div class="qd-add-section">
+        <button class="qd-add-btn" onclick="qdAddSection()">+ 섹션 추가</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 퀵 디자인 라이트박스 모달 -->
+<div class="qd-modal" id="qd-modal" onclick="if(event.target===this)qdCloseModal()">
+  <div class="qd-modal-inner">
+    <button class="qd-modal-close" onclick="qdCloseModal()">×</button>
+    <div class="qd-modal-img-wrap">
+      <img id="qd-modal-img" src="" alt="" class="qd-modal-img">
+      <div class="qd-modal-loading" id="qd-modal-loading">⏳ 생성 중...</div>
+    </div>
+    <div class="qd-modal-result-actions" id="qd-modal-result-actions">
+      <textarea class="qd-modal-prompt" id="qd-modal-prompt" placeholder="프롬프트를 입력하세요..."></textarea>
+      <div class="qd-modal-actions-row">
+        <button class="qd-modal-regen-btn" id="qd-modal-regen-btn" onclick="qdRegenerateFromModal()">🔄 재생성</button>
+        <button class="qd-modal-send-btn" onclick="qdSendToEditor()">📋 상세페이지 에디터로 보내기</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- [ZOOM] 플로팅 줌 컨트롤 패널 (캔버스와 우측 사이드바 사이) -->
 <div id="zoom-float" style="position:fixed;right:242px;top:60%;z-index:100;display:flex;flex-direction:column;gap:3px;align-items:center;background:#141414;border:1px solid #2a2a2a;border-radius:8px;padding:8px 6px;box-shadow:0 4px 16px rgba(0,0,0,0.5)">
   <button class="btn undo-btn" onclick="setZoom(zoom+0.05)" title="확대 (+)" style="text-align:center;font-size:15px;padding:4px 8px;width:34px">+</button>
@@ -917,11 +1027,12 @@ window.onload=()=>{
     miSg.appendChild(d);
   });
   initCanvas();
+  qdInit();
   document.addEventListener('keydown',e=>{
     const tag=document.activeElement.tagName;
     const isInput=(tag==='TEXTAREA'||tag==='INPUT');
-    if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();doUndo();}
-    if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key.toLowerCase()==='z'))){e.preventDefault();doRedo();}
+    if((e.ctrlKey||e.metaKey)&&(e.key==='z'||e.key==='Z'||e.code==='KeyZ')&&!e.shiftKey){e.preventDefault();doUndo();}
+    if((e.ctrlKey||e.metaKey)&&((e.key==='y'||e.key==='Y'||e.code==='KeyY')||((e.key==='z'||e.key==='Z'||e.code==='KeyZ')&&e.shiftKey))){e.preventDefault();doRedo();}
     // [FIX 8] Ctrl+C 복사
     if((e.ctrlKey||e.metaKey)&&e.key==='c'&&!isInput){
       const s=cv.getActiveObject();
@@ -3012,11 +3123,16 @@ let _pixelTimer=null;
 function switchTab(tab){
   const editorContent=document.getElementById('tab-editor-content');
   const mainContent=document.getElementById('tab-main-content');
+  const quickContent=document.getElementById('tab-quick-content');
   const editorBtn=document.getElementById('tab-editor');
   const mainBtn=document.getElementById('tab-main');
+  const quickBtn=document.getElementById('tab-quick');
   const miDlGroup=document.getElementById('mi-dl-group');
   const zoomBtns=document.querySelectorAll('.undo-btn:not(#mi-undo-btn), #zoom-label');
   const editBtns=document.querySelectorAll('.actions .ghost:not(#mi-clear-btn), .actions .primary:not(#mi-undo-btn)');
+  // Always hide quick tab unless switching to it
+  quickContent.classList.remove('show');
+  quickBtn.classList.remove('active');
   if(tab==='editor'){
     editorContent.style.display='flex';
     mainContent.classList.remove('show');
@@ -3024,7 +3140,7 @@ function switchTab(tab){
     zoomBtns.forEach(el=>el.style.display='');
     editBtns.forEach(el=>el.style.display='');
     miDlGroup.classList.remove('show');
-  } else {
+  } else if(tab==='main'){
     editorContent.style.display='none';
     mainContent.classList.add('show');
     editorBtn.classList.remove('active'); mainBtn.classList.add('active');
@@ -3032,6 +3148,15 @@ function switchTab(tab){
     editBtns.forEach(el=>el.style.display='none');
     miDlGroup.classList.add('show');
     setTimeout(miInitCanvas, 50);
+  } else if(tab==='quick'){
+    editorContent.style.display='none';
+    mainContent.classList.remove('show');
+    quickContent.classList.add('show');
+    editorBtn.classList.remove('active'); mainBtn.classList.remove('active');
+    quickBtn.classList.add('active');
+    zoomBtns.forEach(el=>el.style.display='none');
+    editBtns.forEach(el=>el.style.display='none');
+    miDlGroup.classList.remove('show');
   }
 }
 
@@ -3172,8 +3297,8 @@ document.addEventListener('keydown',function(e){
   const isInput=(tag==='TEXTAREA'||tag==='INPUT');
   if(isInput)return;
   // Ctrl+Z 되돌리기
-  if((e.ctrlKey||e.metaKey)&&e.key==='z'){e.preventDefault();miUndo();return;}
-  if((e.ctrlKey||e.metaKey)&&(e.key==='y'||(e.shiftKey&&e.key.toLowerCase()==='z'))){e.preventDefault();miRedo();return;}
+  if((e.ctrlKey||e.metaKey)&&(e.key==='z'||e.key==='Z'||e.code==='KeyZ')&&!e.shiftKey){e.preventDefault();miUndo();return;}
+  if((e.ctrlKey||e.metaKey)&&((e.key==='y'||e.key==='Y'||e.code==='KeyY')||((e.key==='z'||e.key==='Z'||e.code==='KeyZ')&&e.shiftKey))){e.preventDefault();miRedo();return;}
   // Del/Backspace 삭제
   if((e.key==='Delete'||e.key==='Backspace')&&miSel2){e.preventDefault();miDelSel();return;}
   // 방향키 이동 (1px, Shift=10px)
@@ -4435,7 +4560,7 @@ document.addEventListener('keydown', function(e){
 
 // ── 스마트 스냅 가이드 (드래그 중) — initCanvas() 에서 호출됨 ──────────
 function initSnapGuides(){
-  const SNAP_THRESHOLD = 5; // px
+  const SNAP_THRESHOLD = 5 / zoom; // px (zoom 배율 보정: 실제 화면상 스냅 거리 일정 유지)
 
   function getGuideEls(){
     return {
@@ -4529,6 +4654,252 @@ function initSnapGuides(){
   }
 
   hookSnap();
+}
+
+// ===== 퀵 디자인 탭 =====
+let qdSections=[];
+let qdNextId=1;
+let qdModalSectionIdx=-1;
+
+function qdInit(){
+  for(let i=0;i<6;i++) qdSections.push({id:qdNextId++,orig:null,ref:null,prompt:'',result:null,generating:false});
+  qdRenderSections();
+}
+
+function qdAddSection(){
+  qdSections.push({id:qdNextId++,orig:null,ref:null,prompt:'',result:null,generating:false});
+  qdRenderSections();
+}
+
+function qdRemoveSection(idx){
+  if(qdSections.length<=1){toast('최소 1개 섹션은 유지해야 합니다','err');return;}
+  qdSections.splice(idx,1);
+  qdRenderSections();
+}
+
+function qdRenderSections(){
+  const container=document.getElementById('qd-sections');
+  if(!container)return;
+  container.innerHTML='';
+  qdSections.forEach((sec,idx)=>{
+    const col=document.createElement('div');
+    col.className='qd-section';
+    col.id='qd-sec-'+idx;
+
+    // Row 1: 공급사 원본
+    const origCellContent=sec.orig
+      ?`<img class="qd-cell-img" src="${sec.orig}" onclick="qdOpenModal(${idx},'orig')">
+        <button class="qd-cell-clear" onclick="event.stopPropagation();qdClearSlot(${idx},'orig')">×</button>`
+      :`<div class="qd-upload-ico">📦</div>
+        <div class="qd-upload-label">공급사 원본<br><span class="qd-required-dot">*필수</span></div>`;
+
+    // Row 2: 참고 이미지
+    const refCellContent=sec.ref
+      ?`<img class="qd-cell-img" src="${sec.ref}" onclick="qdOpenModal(${idx},'ref')">
+        <button class="qd-cell-clear" onclick="event.stopPropagation();qdClearSlot(${idx},'ref')">×</button>`
+      :`<div class="qd-upload-ico">🌅</div>
+        <div class="qd-upload-label">참고 이미지<br><span style="color:#444">선택</span></div>`;
+
+    // Row 4: 결과
+    const resultContent=sec.result
+      ?`<img class="qd-result-img" src="${sec.result}">
+        <div class="qd-result-overlay"><span class="qd-result-overlay-txt">확대 보기</span></div>`
+      :`<div class="qd-result-placeholder">
+          <div class="qd-result-placeholder-ico">${sec.generating?'⏳':'🖼️'}</div>
+          <div class="qd-result-placeholder-txt">${sec.generating?'생성 중...':'생성 버튼을<br>눌러주세요'}</div>
+        </div>`;
+
+    col.innerHTML=`
+      <div class="qd-section-header">
+        <span class="qd-section-name">섹션 ${idx+1}</span>
+        <button class="qd-section-del" onclick="qdRemoveSection(${idx})" title="섹션 삭제">×</button>
+      </div>
+      <div class="qd-cell cell-orig">
+        <label class="qd-upload-zone${sec.orig?' has-image':''}"
+               ondragover="event.preventDefault()"
+               ondrop="event.preventDefault();qdDrop(event,${idx},'orig')">
+          <input type="file" accept="image/*" onchange="qdFileLoad(this,${idx},'orig')">
+          ${origCellContent}
+        </label>
+      </div>
+      <div class="qd-cell cell-ref">
+        <label class="qd-upload-zone${sec.ref?' has-image':''}"
+               ondragover="event.preventDefault()"
+               ondrop="event.preventDefault();qdDrop(event,${idx},'ref')">
+          <input type="file" accept="image/*" onchange="qdFileLoad(this,${idx},'ref')">
+          ${refCellContent}
+        </label>
+      </div>
+      <div class="qd-cell cell-prompt">
+        <textarea class="qd-prompt-input"
+                  id="qd-prompt-${idx}"
+                  placeholder="프롬프트 입력 (선택사항)..."
+                  oninput="qdSections[${idx}].prompt=this.value">${sec.prompt}</textarea>
+      </div>
+      <div class="qd-cell cell-result">
+        <div class="qd-result-area${sec.result?' has-result':''}"
+             onclick="${sec.result?`qdOpenModal(${idx},'result')`:''}">
+          ${resultContent}
+        </div>
+        <div class="qd-gen-btn-wrap">
+          <button class="qd-gen-btn${sec.generating?' loading':''}"
+                  id="qd-gen-btn-${idx}"
+                  onclick="qdGenerate(${idx})"
+                  ${!sec.orig||sec.generating?'disabled':''}>
+            ${sec.generating?'⏳ 생성 중...':'✨ 생성'}
+          </button>
+        </div>
+      </div>`;
+    container.appendChild(col);
+  });
+}
+
+function qdFileLoad(input,idx,type){
+  if(!input.files[0])return;
+  const r=new FileReader();
+  r.onload=e=>{
+    if(type==='orig') qdSections[idx].orig=e.target.result;
+    else qdSections[idx].ref=e.target.result;
+    qdRenderSections();
+  };
+  r.readAsDataURL(input.files[0]);
+}
+
+function qdDrop(event,idx,type){
+  const file=event.dataTransfer.files[0];
+  if(!file||!file.type.startsWith('image/'))return;
+  const r=new FileReader();
+  r.onload=e=>{
+    if(type==='orig') qdSections[idx].orig=e.target.result;
+    else qdSections[idx].ref=e.target.result;
+    qdRenderSections();
+  };
+  r.readAsDataURL(file);
+}
+
+function qdClearSlot(idx,type){
+  if(type==='orig') qdSections[idx].orig=null;
+  else qdSections[idx].ref=null;
+  qdRenderSections();
+}
+
+async function qdGenerate(idx){
+  const sec=qdSections[idx];
+  if(!sec.orig){toast('공급사 원본 이미지가 필요합니다','err');return;}
+  if(sec.generating)return;
+  sec.generating=true;
+  qdRenderSections();
+  try{
+    const images=[toImg(sec.orig)];
+    let roleNote='Image 1 is the main product photo — this exact product must remain unchanged in shape, color, and detail.';
+    if(sec.ref){
+      images.push(toImg(sec.ref));
+      roleNote+=' Image 2 is a background style reference — strongly and clearly apply its mood, color palette, lighting, and background style (not its content/product) to the new background. Do not just hint at it subtly — make the resulting background visually similar in style to this reference.';
+    }
+    const userPrompt=sec.prompt||'Create a professional product photo';
+    const fullPrompt=`${roleNote}\n\nTask: ${userPrompt}\n\nRemove all existing text and watermarks. Do not add any new text. Keep the main product exactly as is, only change the background.\nMake it look like professional studio product photography for premium e-commerce advertising — soft realistic lighting, natural shadows and reflections, sharp focus, high detail, photorealistic.\n4K.`;
+    const payload={images,prompt:fullPrompt,temperature:0.85+Math.random()*0.15};
+    const res=await fetch(GEMINI_EDIT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await res.json();
+    if(!data.base64)throw new Error('결과 이미지 없음');
+    sec.result=`data:${data.mimeType||'image/png'};base64,${data.base64}`;
+    toast(`섹션 ${idx+1} 생성 완료`,'ok');
+  }catch(e){
+    toast(`섹션 ${idx+1} 생성 실패: ${e.message}`,'err');
+  }finally{
+    sec.generating=false;
+    qdRenderSections();
+  }
+}
+
+function qdOpenModal(idx,type){
+  const sec=qdSections[idx];
+  qdModalSectionIdx=idx;
+  const modal=document.getElementById('qd-modal');
+  const img=document.getElementById('qd-modal-img');
+  const resultActions=document.getElementById('qd-modal-result-actions');
+  const promptInput=document.getElementById('qd-modal-prompt');
+  const loading=document.getElementById('qd-modal-loading');
+  loading.classList.remove('show');
+  if(type==='orig'){
+    img.src=sec.orig;
+    resultActions.classList.remove('show');
+  }else if(type==='ref'){
+    img.src=sec.ref;
+    resultActions.classList.remove('show');
+  }else if(type==='result'){
+    img.src=sec.result;
+    promptInput.value=sec.prompt||'';
+    resultActions.classList.add('show');
+  }
+  modal.classList.add('show');
+}
+
+function qdCloseModal(){
+  document.getElementById('qd-modal').classList.remove('show');
+  document.getElementById('qd-modal-loading').classList.remove('show');
+  qdModalSectionIdx=-1;
+}
+
+async function qdRegenerateFromModal(){
+  const idx=qdModalSectionIdx;
+  if(idx<0||idx>=qdSections.length)return;
+  const sec=qdSections[idx];
+  if(!sec.orig){toast('공급사 원본 이미지가 필요합니다','err');return;}
+  const promptInput=document.getElementById('qd-modal-prompt');
+  sec.prompt=promptInput.value;
+  const gridTA=document.getElementById('qd-prompt-'+idx);
+  if(gridTA) gridTA.value=sec.prompt;
+  const loading=document.getElementById('qd-modal-loading');
+  const regenBtn=document.getElementById('qd-modal-regen-btn');
+  loading.classList.add('show');
+  regenBtn.disabled=true;
+  try{
+    const images=[toImg(sec.orig)];
+    let roleNote='Image 1 is the main product photo — this exact product must remain unchanged in shape, color, and detail.';
+    if(sec.ref){
+      images.push(toImg(sec.ref));
+      roleNote+=' Image 2 is a background style reference — strongly and clearly apply its mood, color palette, lighting, and background style (not its content/product) to the new background. Do not just hint at it subtly — make the resulting background visually similar in style to this reference.';
+    }
+    const userPrompt=sec.prompt||'Create a professional product photo';
+    const fullPrompt=`${roleNote}\n\nTask: ${userPrompt}\n\nRemove all existing text and watermarks. Do not add any new text. Keep the main product exactly as is, only change the background.\nMake it look like professional studio product photography for premium e-commerce advertising — soft realistic lighting, natural shadows and reflections, sharp focus, high detail, photorealistic.\n4K.`;
+    const payload={images,prompt:fullPrompt,temperature:0.85+Math.random()*0.15};
+    const res=await fetch(GEMINI_EDIT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const data=await res.json();
+    if(!data.base64)throw new Error('결과 이미지 없음');
+    const resultUrl=`data:${data.mimeType||'image/png'};base64,${data.base64}`;
+    sec.result=resultUrl;
+    document.getElementById('qd-modal-img').src=resultUrl;
+    qdRenderSections();
+    toast('재생성 완료','ok');
+  }catch(e){
+    toast('재생성 실패: '+e.message,'err');
+  }finally{
+    loading.classList.remove('show');
+    regenBtn.disabled=false;
+  }
+}
+
+function qdSendToEditor(){
+  const idx=qdModalSectionIdx;
+  if(idx<0||idx>=qdSections.length)return;
+  const sec=qdSections[idx];
+  if(!sec.result)return;
+  if(!cv){toast('에디터 캔버스가 초기화되지 않았습니다','err');return;}
+  fabric.Image.fromURL(sec.result,function(img){
+    const W=cv.width||CANVAS_W;
+    const sc=W/img.width;
+    img.set({left:0,top:0,scaleX:sc,scaleY:sc});
+    img._meta={type:'image'};
+    cv.add(img);
+    cv.sendToBack(img);
+    objs.push(img);
+    if(typeof updateLayers==='function') updateLayers();
+    cv.requestRenderAll();
+  });
+  qdCloseModal();
+  switchTab('editor');
+  toast('상세페이지 에디터로 전송됨','ok');
 }
 </script>
 </body>
