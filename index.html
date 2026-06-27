@@ -850,6 +850,10 @@ const WORKER = 'https://proxy.wonflowai.com';
 const GEMINI_EDIT_URL = 'https://n8n.wonflowai.com/webhook/happybiz-gemini-edit';
 // [FIX 4] 860px 기준 폰트 사이즈 단계 (큰→작은 순)
 const FONT_SIZES = [42, 34, 27, 20, 15];
+// role별 bbox height 대비 폰트 크기 비율 (headline 가장 크게)
+const ROLE_RATIO = { headline: 0.72, subhead: 0.55, body: 0.45, caption: 0.35, label: 0.48, subtext: 0.52 };
+// 원본 이미지 픽셀 크기 (autoProcess 시 저장, makeTextLayer에서 bbox 변환에 사용)
+let _origImgW = 0, _origImgH = 0;
 // 860px 고정 캔버스 폭
 const CANVAS_W = 860;
 
@@ -1050,21 +1054,22 @@ function doLoad(file){
 }
 
 async function callOpenAI(base64,mime){
-  const prompt=`이 이미지를 분석해서 감지된 각 텍스트 블록을 다음 중 하나로 분류해:
-- headline (시선을 끄는 핵심 후킹 문구, 보통 가장 크게 표시됨)
-- subtext (보조 설명/근거 문구)
-- label (제품 특정 부위를 가리키는 기능 라벨, 보통 점선/포인터/연결선과 함께 표시됨)
+  const prompt=`이 이미지에서 한자(중국어)가 포함된 텍스트 블록만 감지해. 영어/숫자/기호만 있는 텍스트는 제외해. 영어+한자 혼합 줄은 한자 부분만 별도 bbox로 분리해서 추출해.
 
 각 항목마다 다음 필드를 모두 포함한 JSON 배열만 반환해. 마크다운 없이 순수 JSON만 출력해.
-- role: 위 세 가지 중 하나 ("headline"/"subtext"/"label")
-- text: 원본 텍스트
-- translated: 원문의 셀링포인트를 살린 한국어 카피 (직역 금지). headline은 짧고 강하게 후킹되도록, subtext는 신뢰감 있고 자연스럽게, label은 명확하고 간결하게 작성
+- role: "headline" | "subhead" | "body" | "caption" | "label" 중 하나. headline=가장 크게 표시되는 핵심 문구, subhead=보조 제목, body=본문 단락, caption=캡션/설명, label=기능 라벨(포인터/연결선 동반)
+- text_original: 원본 중국어 텍스트 (한자만)
+- text_translated: 셀링포인트를 살린 한국어 카피 (직역 금지). headline은 짧고 강하게, subhead/body는 자연스럽고 신뢰감 있게, caption/label은 간결하게
+- text: text_original과 동일값 (하위 호환)
+- translated: text_translated와 동일값 (하위 호환)
+- bbox: 이미지 전체 픽셀 기준 좌표 객체 {"x": 좌측 픽셀(정수), "y": 상단 픽셀(정수), "width": 너비 픽셀(정수), "height": 높이 픽셀(정수)}
 - top: 텍스트 상단 위치 (이미지 높이 대비 %, 숫자)
 - left: 텍스트 좌측 위치 (이미지 너비 대비 %, 숫자)
 - width: 텍스트 영역 너비 (이미지 너비 대비 %, 숫자)
 - height: 텍스트 영역 높이 (이미지 높이 대비 %, 숫자)
 - text_color: 텍스트 실제 색상 hex값 (예: "#ffffff")
 - font_weight: "bold" 또는 "normal"
+- is_chinese: true
 
 텍스트가 없으면 빈 배열 [] 반환.`;
 
@@ -1106,6 +1111,7 @@ async function startAutoProcess(){
 }
 
 async function autoProcess(origW,origH){
+  _origImgW=origW; _origImgH=origH; // bbox 픽셀→canvas 변환에 사용
   setStep(2,'run','감지 중...');showOv('텍스트 감지 + 번역 중...');setStatus('분석 중','spin');
   let items;
   const base64=origDataUrl.split(',')[1];
@@ -1163,8 +1169,11 @@ async function autoProcess(origW,origH){
     const mimeType=origDataUrl.split(';')[0].split(':')[1];
 
     async function attemptRemoval(b64,mime,remainingItems){
-      const regionDesc=remainingItems.map((item,i)=>`region ${i+1} at approximately ${item.left}% from left, ${item.top}% from top, sized ${item.width}%x${item.height}%`).join('; ');
-      const removePrompt=`Remove every piece of Chinese text in this image completely, regardless of size — including large titles, headlines, body paragraphs, and small captions or labels inside colored badges/diagrams/charts. Do not leave any Chinese characters anywhere. As additional location hints, there are ${remainingItems.length} known text regions: ${regionDesc}. Reconstruct the background naturally in place of removed text. Keep everything else exactly the same. Keep the same image size. Do not add any new text. 4K.`;
+      const bboxDesc=remainingItems.map((item,i)=>{
+        if(item.bbox)return`region ${i+1}: pixel rect [x=${item.bbox.x}, y=${item.bbox.y}, w=${item.bbox.width}, h=${item.bbox.height}]`;
+        return`region ${i+1}: approximately ${item.left}% from left, ${item.top}% from top, sized ${item.width}%x${item.height}%`;
+      }).join('; ');
+      const removePrompt=`Detect all Chinese text in this image and remove it completely, filling the area naturally with the surrounding background. Do not change, regenerate, or alter anything else in the image — every pixel outside the Chinese text areas must remain exactly as in the original. Preserve the exact same resolution. Focus removal specifically on these regions: ${bboxDesc}`;
       const res=await fetch(GEMINI_EDIT_URL,{
         method:'POST',
         headers:{'Content-Type':'application/json'},
@@ -1265,8 +1274,11 @@ async function removeTextAgain(){
   }
 
   async function attemptRemoval(b64,mimeT,remainingItems){
-    const regionDesc=remainingItems.map((item,i)=>`region ${i+1} at approximately ${item.left}% from left, ${item.top}% from top, sized ${item.width}%x${item.height}%`).join('; ');
-    const removePrompt=`Remove every piece of Chinese text in this image completely, regardless of size — including large titles, headlines, body paragraphs, and small captions or labels inside colored badges/diagrams/charts. Do not leave any Chinese characters anywhere. As additional location hints, there are ${remainingItems.length} known text regions: ${regionDesc}. Reconstruct the background naturally in place of removed text. Keep everything else exactly the same. Keep the same image size. Do not add any new text. 4K.`;
+    const bboxDesc=remainingItems.map((item,i)=>{
+      if(item.bbox)return`region ${i+1}: pixel rect [x=${item.bbox.x}, y=${item.bbox.y}, w=${item.bbox.width}, h=${item.bbox.height}]`;
+      return`region ${i+1}: approximately ${item.left}% from left, ${item.top}% from top, sized ${item.width}%x${item.height}%`;
+    }).join('; ');
+    const removePrompt=`Detect all Chinese text in this image and remove it completely, filling the area naturally with the surrounding background. Do not change, regenerate, or alter anything else in the image — every pixel outside the Chinese text areas must remain exactly as in the original. Preserve the exact same resolution. Focus removal specifically on these regions: ${bboxDesc}`;
     const res=await fetch(GEMINI_EDIT_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
@@ -2362,20 +2374,57 @@ async function spotErase(rawL,rawT,rawW,rawH,shapeMode){
   }
 }
 
-// [FIX 4] makeTextLayer - 5단계 폰트 사이즈 적용, [FIX 6] radius 지원
+// bbox 픽셀 + role 기반 폰트 크기 자동 계산 (measureText로 bbox width 맞게 조정)
+function computeFontSizeFromBbox(item, displayText){
+  const W=cv.width, H=cv.height;
+  let bboxPxW, bboxPxH;
+  if(item.bbox && _origImgW>0 && _origImgH>0){
+    const scX=W/_origImgW, scY=H/_origImgH;
+    bboxPxW=item.bbox.width*scX;
+    bboxPxH=item.bbox.height*scY;
+  } else {
+    bboxPxW=(item.width/100)*W;
+    bboxPxH=(item.height/100)*H;
+  }
+  const ratio=ROLE_RATIO[item.role]||0.52;
+  let fs=Math.round(bboxPxH*ratio);
+  // measureText로 bbox 너비 초과 시 폰트 크기 축소 (2행 기준 여유)
+  if(displayText && bboxPxW>0){
+    const tmpC=document.createElement('canvas');
+    const ctx=tmpC.getContext('2d');
+    while(fs>8){
+      ctx.font=`${fs}px "Noto Sans KR"`;
+      if(ctx.measureText(displayText).width<=bboxPxW*2) break;
+      fs--;
+    }
+  }
+  return Math.max(8, Math.min(fs, 72));
+}
+
+// [FIX 4] makeTextLayer - bbox+role 기반 폰트 사이즈 자동계산, 자동 줄바꿈, [FIX 6] radius 지원
 function makeTextLayer(item,displayText,translated){
   const W=cv.width,H=cv.height;
-  const left=(item.left/100)*W;
-  const top=(item.top/100)*H;
-  const width=(item.width/100)*W;
-  // [FIX 4] height% 기반 단계별 폰트 사이즈
-  let fs=classifyFontSize(item);
+  // bbox 픽셀 좌표가 있으면 우선 사용, 없으면 % 기반
+  let left,top,width;
+  if(item.bbox && _origImgW>0 && _origImgH>0){
+    const scX=W/_origImgW, scY=H/_origImgH;
+    left=item.bbox.x*scX;
+    top=item.bbox.y*scY;
+    width=item.bbox.width*scX;
+  } else {
+    left=(item.left/100)*W;
+    top=(item.top/100)*H;
+    width=(item.width/100)*W;
+  }
+  // role + bbox 기반 폰트 크기 자동 계산
+  let fs=computeFontSizeFromBbox(item, displayText);
   let tc='#111111';
   if(item.text_color&&/^#[0-9a-fA-F]{3,6}$/.test(item.text_color)){
     tc=item.text_color;
   }else{
     tc=getRegionContrastColor(item);
   }
+  // fabric.Textbox는 width 설정 시 자동 줄바꿈 지원
   const txt=new fabric.Textbox(displayText,{
     left,top,width,fontSize:fs,
     fontWeight:item.font_weight||'bold',
@@ -2385,7 +2434,7 @@ function makeTextLayer(item,displayText,translated){
     borderColor:'#f5e6c8',cornerColor:'#f5e6c8',cornerSize:7,
     transparentCorners:false,padding:3,
   });
-    txt._meta={original:item.text,translated,type:'text'};
+  txt._meta={original:item.text_original||item.text,translated,type:'text'};
   cv.add(txt);objs.push(txt);return txt;
 }
 
