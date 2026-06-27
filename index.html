@@ -269,10 +269,10 @@ select.pi{cursor:pointer}
 .qd-row-labels{display:flex;flex-direction:column;width:76px;flex-shrink:0;background:#111;border-right:1px solid #1a1a1a;z-index:10}
 .qd-label-spacer{height:38px;flex-shrink:0;border-bottom:1px solid #1a1a1a}
 .qd-row-label{display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:700;color:#666;letter-spacing:1px;text-transform:uppercase;border-bottom:1px solid #1a1a1a;text-align:center;padding:4px 2px;flex-shrink:0}
-.qd-row-label.row-orig{height:160px}
-.qd-row-label.row-ref{height:160px}
-.qd-row-label.row-prompt{height:90px}
-.qd-row-label.row-result{flex:1;min-height:180px}
+.qd-row-label.row-orig{height:100px}
+.qd-row-label.row-ref{height:100px}
+.qd-row-label.row-prompt{height:200px}
+.qd-row-label.row-result{flex:1;min-height:120px}
 .qd-sections-scroll{flex:1;overflow-x:auto;overflow-y:hidden;display:flex;align-items:stretch}
 .qd-sections{display:flex;min-height:100%}
 .qd-section{width:190px;flex-shrink:0;border-right:1px solid #1a1a1a;display:flex;flex-direction:column}
@@ -281,10 +281,10 @@ select.pi{cursor:pointer}
 .qd-section-del{background:transparent;border:none;color:#333;font-size:15px;cursor:pointer;line-height:1;padding:2px 4px;border-radius:3px}
 .qd-section-del:hover{color:#f87171;background:#1a0a0a}
 .qd-cell{border-bottom:1px solid #1a1a1a;display:flex;flex-direction:column;position:relative;overflow:hidden}
-.qd-cell.cell-orig{height:160px;flex-shrink:0}
-.qd-cell.cell-ref{height:160px;flex-shrink:0}
-.qd-cell.cell-prompt{height:90px;flex-shrink:0;padding:6px}
-.qd-cell.cell-result{flex:1;min-height:180px;display:flex;flex-direction:column}
+.qd-cell.cell-orig{height:100px;flex-shrink:0}
+.qd-cell.cell-ref{height:100px;flex-shrink:0}
+.qd-cell.cell-prompt{height:200px;flex-shrink:0;padding:6px;display:flex;flex-direction:column}
+.qd-cell.cell-result{flex:1;min-height:120px;display:flex;flex-direction:column}
 .qd-upload-zone{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
 .qd-upload-zone:hover{background:#1a1a1a}
 .qd-upload-zone.has-image{background:#0a0a0a}
@@ -333,6 +333,13 @@ select.pi{cursor:pointer}
 .qd-modal-send-btn:hover{background:#7c6fe0;color:#fff}
 .qd-modal-loading{position:absolute;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;border-radius:6px;color:#a78bfa;font-size:12px;font-family:'Space Mono',monospace;letter-spacing:1px}
 .qd-modal-loading.show{display:flex}
+.qd-guide-panel{width:220px;min-width:200px;flex-shrink:0;background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:16px 14px;overflow-y:auto;font-size:12px;line-height:1.6;align-self:stretch;margin:8px 8px 8px 0}
+.qd-guide-title{font-size:13px;font-weight:700;color:#333;margin-bottom:14px;border-bottom:2px solid #dee2e6;padding-bottom:8px}
+.qd-guide-section{margin-bottom:14px}
+.qd-guide-subtitle{font-weight:600;color:#495057;margin-bottom:4px}
+.qd-guide-order{color:#495057;margin-bottom:6px}
+.qd-guide-example{background:#e9ecef;border-radius:4px;padding:6px 8px;color:#6c757d;font-size:11px}
+.qd-guide-tip{background:#fff3cd;border-radius:4px;padding:8px 10px;color:#856404;font-size:11px;margin-top:10px}
 
 </style>
 </head>
@@ -947,6 +954,20 @@ select.pi{cursor:pointer}
       <div class="qd-add-section">
         <button class="qd-add-btn" onclick="qdAddSection()">+ 섹션 추가</button>
       </div>
+      <div class="qd-guide-panel">
+        <div class="qd-guide-title">프롬프트 작성 가이드</div>
+        <div class="qd-guide-section">
+          <div class="qd-guide-subtitle">📌 모델 있을 때</div>
+          <div class="qd-guide-order">제품유지 → 모델교체<br>(원본 대신 참고이미지의 인물) → 포즈 → 착용방식 → 배경 → 텍스트</div>
+          <div class="qd-guide-example">예) "이 제품을 유지하면서, 참고이미지의 인물로 모델을 교체하고 자연스러운 착용 포즈로 흰 스튜디오 배경에 배치해줘."</div>
+        </div>
+        <div class="qd-guide-section">
+          <div class="qd-guide-subtitle">📌 모델 없을 때</div>
+          <div class="qd-guide-order">제품유지 → 배치/구도 → 배경 → 텍스트</div>
+          <div class="qd-guide-example">예) "이 제품을 중앙에 배치하고, 참고이미지의 배경 스타일을 적용해줘. 텍스트 없이."</div>
+        </div>
+        <div class="qd-guide-tip">💡 참고이미지를 배경 스타일만 가져올지, 모델·인물까지 가져올지는 프롬프트에 직접 명시해야 합니다.</div>
+      </div>
     </div>
   </div>
 </div>
@@ -960,7 +981,7 @@ select.pi{cursor:pointer}
       <div class="qd-modal-loading" id="qd-modal-loading">⏳ 생성 중...</div>
     </div>
     <div class="qd-modal-result-actions" id="qd-modal-result-actions">
-      <textarea class="qd-modal-prompt" id="qd-modal-prompt" placeholder="순서: 제품유지 → 모델교체(원본의 [성별/특징] 대신 참고이미지의 [성별/특징]로) → 포즈 → 착용방식 → 배경 → 텍스트(문구/폰트/위치)"></textarea>
+      <textarea class="qd-modal-prompt" id="qd-modal-prompt" placeholder="모델O: 제품유지→모델교체→포즈→착용방식→배경→텍스트 / 모델X: 제품유지→배치구도→배경→텍스트"></textarea>
       <div class="qd-modal-actions-row">
         <button class="qd-modal-regen-btn" id="qd-modal-regen-btn" onclick="qdRegenerateFromModal()">🔄 재생성</button>
         <button class="qd-modal-send-btn" onclick="qdSendToEditor()">📋 상세페이지 에디터로 보내기</button>
@@ -4737,7 +4758,7 @@ function qdRenderSections(){
       <div class="qd-cell cell-prompt">
         <textarea class="qd-prompt-input"
                   id="qd-prompt-${idx}"
-                  placeholder="순서: 제품유지 → 모델교체(원본의 [성별/특징] 대신 참고이미지의 [성별/특징]로) → 포즈 → 착용방식 → 배경 → 텍스트(문구/폰트/위치)"
+                  placeholder="모델O: 제품유지→모델교체→포즈→착용방식→배경→텍스트 / 모델X: 제품유지→배치구도→배경→텍스트"
                   oninput="qdSections[${idx}].prompt=this.value">${sec.prompt}</textarea>
       </div>
       <div class="qd-cell cell-result">
