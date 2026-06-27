@@ -4314,11 +4314,29 @@ function alignToCanvas(dir){
   const active = cv.getActiveObject();
   if(!active || active === cv.getObjects()[0]) return;
   const cW = cv.width, cH = cv.height;
-  const obList = active.type === 'activeSelection'
-    ? active.getObjects()
-    : [active];
 
-  obList.forEach(o => {
+  if(active.type === 'activeSelection'){
+    // 다중 선택 시 각 객체의 left/top이 activeSelection 중심 기준 상대좌표로 바뀌므로,
+    // discardActiveObject()로 해제해 절대좌표로 복귀시킨 뒤 정렬 계산을 수행한다.
+    const items = active.getObjects();
+    cv.discardActiveObject();
+    items.forEach(o => {
+      const bnd = o.getBoundingRect(true, true);
+      let newLeft = o.left, newTop = o.top;
+      if(dir === 'left')    { newLeft = o.left - bnd.left; }
+      if(dir === 'hcenter') { newLeft = o.left + (cW/2 - (bnd.left + bnd.width/2)); }
+      if(dir === 'right')   { newLeft = o.left + (cW - (bnd.left + bnd.width)); }
+      if(dir === 'top')     { newTop  = o.top  - bnd.top; }
+      if(dir === 'vcenter') { newTop  = o.top  + (cH/2 - (bnd.top + bnd.height/2)); }
+      if(dir === 'bottom')  { newTop  = o.top  + (cH - (bnd.top + bnd.height)); }
+      o.set({ left: newLeft, top: newTop });
+      o.setCoords();
+    });
+    // 정렬 후 다중 선택 상태를 복원한다.
+    const sel = new fabric.ActiveSelection(items, { canvas: cv });
+    cv.setActiveObject(sel);
+  } else {
+    const o = active;
     const bnd = o.getBoundingRect(true, true);
     let newLeft = o.left, newTop = o.top;
     if(dir === 'left')    { newLeft = o.left - bnd.left; }
@@ -4329,8 +4347,7 @@ function alignToCanvas(dir){
     if(dir === 'bottom')  { newTop  = o.top  + (cH - (bnd.top + bnd.height)); }
     o.set({ left: newLeft, top: newTop });
     o.setCoords();
-  });
-  if(active.type === 'activeSelection') active.setCoords();
+  }
   cv.requestRenderAll();
   saveHistory();
 }
