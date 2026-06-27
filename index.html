@@ -197,6 +197,15 @@ select.pi{cursor:pointer}
 .mi-crop-footer{margin-top:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
 .crop-ratio-btn{background:#1a1a1a;color:#666;border:1px solid #2a2a2a;font-size:10px;padding:3px 8px;border-radius:3px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s}
 .crop-ratio-btn.on{background:#1a1209;border-color:#f5e6c860;color:#f5e6c8}
+/* ===== 정렬 툴바 ===== */
+.align-btn{background:transparent;border:1px solid transparent;border-radius:3px;color:#444;cursor:pointer;padding:3px;display:flex;align-items:center;justify-content:center;transition:all .15s;line-height:0}
+.align-btn:hover:not(:disabled){background:#1e1e1e;border-color:#333;color:#ccc}
+.align-btn:disabled{opacity:.3;cursor:not-allowed}
+.align-btn.active{color:#f5e6c8}
+/* 스마트 스냅 가이드라인 */
+.snap-guide{position:absolute;pointer-events:none;z-index:500}
+.snap-guide.h{left:0;right:0;height:0;border-top:1px dashed #a78bfa}
+.snap-guide.v{top:0;bottom:0;width:0;border-left:1px dashed #a78bfa}
 /* ===== 영역 지정 지우기 ===== */
 .spot-erase-btn.active{background:#3d2d6e;color:#c4b5fd;border-color:#7c3aed}
 #spot-erase-banner{display:none}
@@ -286,9 +295,31 @@ select.pi{cursor:pointer}
 </div>
 
 <div style="text-align:center;font-size:10px;color:#666;padding:5px 0;background:#111;border-bottom:1px solid #1a1a1a;flex-shrink:0">AI가 만든 결과물이니, 꼭 한 번씩 확인해 주세요 😊</div>
-<div class="tab-bar">
+<div class="tab-bar" style="align-items:center">
   <button class="tab-btn active" id="tab-editor" onclick="switchTab('editor')">📋 상세페이지 에디터</button>
   <button class="tab-btn" id="tab-main" onclick="switchTab('main')">🖼️ 메인이미지 생성</button>
+  <!-- 정렬 툴바 -->
+  <div id="align-toolbar" style="display:flex;align-items:center;gap:4px;margin-left:auto;padding:0 10px">
+    <!-- 그룹A: 캔버스 기준 정렬 -->
+    <div style="display:flex;gap:2px" title="캔버스 기준 정렬">
+      <button class="align-btn" id="aln-cv-left"   onclick="alignToCanvas('left')"   title="캔버스 좌측정렬" disabled><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="1.5" height="12" fill="currentColor"/><rect x="3" y="3" width="7" height="3.5" rx="0.5" fill="currentColor"/><rect x="3" y="7.5" width="10" height="3.5" rx="0.5" fill="currentColor"/></svg></button>
+      <button class="align-btn" id="aln-cv-hcenter" onclick="alignToCanvas('hcenter')" title="캔버스 가로중앙정렬" disabled><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="6.25" y="1" width="1.5" height="12" fill="currentColor"/><rect x="2.5" y="3" width="9" height="3.5" rx="0.5" fill="currentColor"/><rect x="4" y="7.5" width="6" height="3.5" rx="0.5" fill="currentColor"/></svg></button>
+      <button class="align-btn" id="aln-cv-right"  onclick="alignToCanvas('right')"  title="캔버스 우측정렬" disabled><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="11.5" y="1" width="1.5" height="12" fill="currentColor"/><rect x="4" y="3" width="7" height="3.5" rx="0.5" fill="currentColor"/><rect x="1" y="7.5" width="10" height="3.5" rx="0.5" fill="currentColor"/></svg></button>
+      <button class="align-btn" id="aln-cv-top"    onclick="alignToCanvas('top')"    title="캔버스 상단정렬" disabled><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="12" height="1.5" fill="currentColor"/><rect x="3" y="3" width="3.5" height="7" rx="0.5" fill="currentColor"/><rect x="7.5" y="3" width="3.5" height="10" rx="0.5" fill="currentColor"/></svg></button>
+      <button class="align-btn" id="aln-cv-vcenter" onclick="alignToCanvas('vcenter')" title="캔버스 세로중앙정렬" disabled><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="6.25" width="12" height="1.5" fill="currentColor"/><rect x="3" y="2.5" width="3.5" height="9" rx="0.5" fill="currentColor"/><rect x="7.5" y="4" width="3.5" height="6" rx="0.5" fill="currentColor"/></svg></button>
+      <button class="align-btn" id="aln-cv-bottom" onclick="alignToCanvas('bottom')" title="캔버스 하단정렬" disabled><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="11.5" width="12" height="1.5" fill="currentColor"/><rect x="3" y="4" width="3.5" height="7" rx="0.5" fill="currentColor"/><rect x="7.5" y="1" width="3.5" height="10" rx="0.5" fill="currentColor"/></svg></button>
+    </div>
+    <div style="width:1px;height:18px;background:#2a2a2a;margin:0 3px"></div>
+    <!-- 그룹B: 선택 항목끼리 정렬 -->
+    <div style="display:flex;gap:2px" title="선택 항목끼리 정렬">
+      <button class="align-btn" id="aln-sel-left"   onclick="alignSelected('left')"   title="선택끼리 좌측정렬" disabled><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="1.5" height="12" fill="currentColor" opacity="0.5"/><rect x="3" y="3" width="7" height="3.5" rx="0.5" fill="currentColor"/><rect x="3" y="7.5" width="10" height="3.5" rx="0.5" fill="currentColor"/></svg></button>
+      <button class="align-btn" id="aln-sel-hcenter" onclick="alignSelected('hcenter')" title="선택끼리 가로중앙정렬" disabled><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="6.25" y="1" width="1.5" height="12" fill="currentColor" opacity="0.5"/><rect x="2.5" y="3" width="9" height="3.5" rx="0.5" fill="currentColor"/><rect x="4" y="7.5" width="6" height="3.5" rx="0.5" fill="currentColor"/></svg></button>
+      <button class="align-btn" id="aln-sel-right"  onclick="alignSelected('right')"  title="선택끼리 우측정렬" disabled><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="11.5" y="1" width="1.5" height="12" fill="currentColor" opacity="0.5"/><rect x="4" y="3" width="7" height="3.5" rx="0.5" fill="currentColor"/><rect x="1" y="7.5" width="10" height="3.5" rx="0.5" fill="currentColor"/></svg></button>
+      <button class="align-btn" id="aln-sel-top"    onclick="alignSelected('top')"    title="선택끼리 상단정렬" disabled><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="1" width="12" height="1.5" fill="currentColor" opacity="0.5"/><rect x="3" y="3" width="3.5" height="7" rx="0.5" fill="currentColor"/><rect x="7.5" y="3" width="3.5" height="10" rx="0.5" fill="currentColor"/></svg></button>
+      <button class="align-btn" id="aln-sel-vcenter" onclick="alignSelected('vcenter')" title="선택끼리 세로중앙정렬" disabled><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="6.25" width="12" height="1.5" fill="currentColor" opacity="0.5"/><rect x="3" y="2.5" width="3.5" height="9" rx="0.5" fill="currentColor"/><rect x="7.5" y="4" width="3.5" height="6" rx="0.5" fill="currentColor"/></svg></button>
+      <button class="align-btn" id="aln-sel-bottom" onclick="alignSelected('bottom')" title="선택끼리 하단정렬" disabled><svg width="14" height="14" viewBox="0 0 14 14" fill="none" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="11.5" width="12" height="1.5" fill="currentColor" opacity="0.5"/><rect x="3" y="4" width="3.5" height="7" rx="0.5" fill="currentColor"/><rect x="7.5" y="1" width="3.5" height="10" rx="0.5" fill="currentColor"/></svg></button>
+    </div>
+  </div>
 </div>
 
 <div class="main" id="tab-editor-content">
@@ -340,6 +371,9 @@ select.pi{cursor:pointer}
     </div>
     <div id="wrap" style="position:relative">
       <canvas id="c"></canvas>
+      <!-- 스마트 스냅 가이드라인 -->
+      <div id="snap-guide-h" class="snap-guide h" style="display:none"></div>
+      <div id="snap-guide-v" class="snap-guide v" style="display:none"></div>
       <div id="spot-drag-overlay"></div>
       <div id="cf-box-overlay"></div>
       <div class="ov" id="ov">
@@ -4239,6 +4273,251 @@ function miExtraSaveWeb(){
   downloadWebPng(canvas,'extra_crop_'+outW+'x'+outH+'_웹용_'+Date.now()+'.png');
   toast('메인추가 크롭 웹용 PNG 저장 완료 ('+outW+'×'+outH+')','ok');
 }
+
+/* ========================================================
+   정렬 툴바 + 방향키 이동 + 스마트 스냅 가이드
+   ======================================================== */
+
+// ── 정렬 툴바: 활성화 상태 업데이트 ──────────────────────
+function updateAlignToolbar(){
+  if(!cv) return;
+  const active = cv.getActiveObject();
+  let count = 0;
+  if(active){
+    if(active.type === 'activeSelection'){
+      count = active.getObjects().length;
+    } else if(active !== cv.getObjects()[0]){
+      count = 1;
+    }
+  }
+  // 그룹A: 1개 이상 선택 시 활성화
+  ['aln-cv-left','aln-cv-hcenter','aln-cv-right','aln-cv-top','aln-cv-vcenter','aln-cv-bottom'].forEach(id=>{
+    const btn = document.getElementById(id);
+    if(btn) btn.disabled = (count === 0);
+  });
+  // 그룹B: 2개 이상 선택 시 활성화
+  ['aln-sel-left','aln-sel-hcenter','aln-sel-right','aln-sel-top','aln-sel-vcenter','aln-sel-bottom'].forEach(id=>{
+    const btn = document.getElementById(id);
+    if(btn) btn.disabled = (count < 2);
+  });
+}
+
+// ── 캔버스 기준 정렬 ──────────────────────────────────────
+function alignToCanvas(dir){
+  if(!cv) return;
+  const active = cv.getActiveObject();
+  if(!active || active === cv.getObjects()[0]) return;
+  const cW = cv.width, cH = cv.height;
+  const obList = active.type === 'activeSelection'
+    ? active.getObjects()
+    : [active];
+
+  obList.forEach(o => {
+    const bnd = o.getBoundingRect(true, true);
+    let newLeft = o.left, newTop = o.top;
+    if(dir === 'left')    { newLeft = o.left - bnd.left; }
+    if(dir === 'hcenter') { newLeft = o.left + (cW/2 - (bnd.left + bnd.width/2)); }
+    if(dir === 'right')   { newLeft = o.left + (cW - (bnd.left + bnd.width)); }
+    if(dir === 'top')     { newTop  = o.top  - bnd.top; }
+    if(dir === 'vcenter') { newTop  = o.top  + (cH/2 - (bnd.top + bnd.height/2)); }
+    if(dir === 'bottom')  { newTop  = o.top  + (cH - (bnd.top + bnd.height)); }
+    o.set({ left: newLeft, top: newTop });
+    o.setCoords();
+  });
+  if(active.type === 'activeSelection') active.setCoords();
+  cv.requestRenderAll();
+  saveHistory();
+}
+
+// ── 선택 항목끼리 정렬 ───────────────────────────────────
+function alignSelected(dir){
+  if(!cv) return;
+  const active = cv.getActiveObject();
+  if(!active || active.type !== 'activeSelection') return;
+  const items = active.getObjects();
+  if(items.length < 2) return;
+
+  // 각 객체의 절대 bounding rect
+  const bnds = items.map(o => o.getBoundingRect(true, true));
+
+  let refVal;
+  if(dir === 'left')    refVal = Math.min(...bnds.map(b => b.left));
+  if(dir === 'right')   refVal = Math.max(...bnds.map(b => b.left + b.width));
+  if(dir === 'top')     refVal = Math.min(...bnds.map(b => b.top));
+  if(dir === 'bottom')  refVal = Math.max(...bnds.map(b => b.top + b.height));
+  if(dir === 'hcenter') refVal = (Math.min(...bnds.map(b => b.left)) + Math.max(...bnds.map(b => b.left + b.width))) / 2;
+  if(dir === 'vcenter') refVal = (Math.min(...bnds.map(b => b.top)) + Math.max(...bnds.map(b => b.top + b.height))) / 2;
+
+  items.forEach((o, i) => {
+    const b = bnds[i];
+    let newLeft = o.left, newTop = o.top;
+    if(dir === 'left')    newLeft = o.left + (refVal - b.left);
+    if(dir === 'right')   newLeft = o.left + (refVal - (b.left + b.width));
+    if(dir === 'top')     newTop  = o.top  + (refVal - b.top);
+    if(dir === 'bottom')  newTop  = o.top  + (refVal - (b.top + b.height));
+    if(dir === 'hcenter') newLeft = o.left + (refVal - (b.left + b.width/2));
+    if(dir === 'vcenter') newTop  = o.top  + (refVal - (b.top  + b.height/2));
+    o.set({ left: newLeft, top: newTop });
+    o.setCoords();
+  });
+  active.setCoords();
+  cv.requestRenderAll();
+  saveHistory();
+}
+
+// onSel / onDesel 이후 툴바 갱신 훅 (cv 준비 후 이벤트 등록)
+(function hookAlignEvents(){
+  function tryHook(){
+    if(!window.cv){ setTimeout(tryHook, 100); return; }
+    cv.on('selection:created', updateAlignToolbar);
+    cv.on('selection:updated', updateAlignToolbar);
+    cv.on('selection:cleared', updateAlignToolbar);
+  }
+  tryHook();
+})();
+
+// ── 방향키 이동 (상세페이지 에디터 캔버스 객체) ─────────────
+document.addEventListener('keydown', function(e){
+  if(!cv || !loaded) return;
+  // 텍스트 입력 중일 때는 무시
+  const tag = (document.activeElement||{}).tagName||'';
+  if(/^(INPUT|TEXTAREA|SELECT)$/.test(tag)) return;
+  // fabric 텍스트 편집 모드일 때 무시
+  if(cv.isDrawingMode) return;
+  const editingObj = cv.getActiveObject();
+  if(editingObj && editingObj.isEditing) return;
+
+  const arrows = ['ArrowLeft','ArrowRight','ArrowUp','ArrowDown'];
+  if(!arrows.includes(e.key)) return;
+
+  const active = cv.getActiveObject();
+  if(!active || active === cv.getObjects()[0]) return;
+
+  // 다른 keydown 핸들러(CF박스, SP박스 등)가 먼저 처리하지 않도록
+  // _cffPendingRect 또는 _spPendingRect 가 있으면 스킵
+  if(window._cffPendingRect || window._spPendingRect) return;
+
+  e.preventDefault();
+  const step = e.shiftKey ? 10 : 1;
+  let dx = 0, dy = 0;
+  if(e.key === 'ArrowLeft')  dx = -step;
+  if(e.key === 'ArrowRight') dx =  step;
+  if(e.key === 'ArrowUp')    dy = -step;
+  if(e.key === 'ArrowDown')  dy =  step;
+
+  if(active.type === 'activeSelection'){
+    active.getObjects().forEach(o => {
+      o.set({ left: o.left + dx, top: o.top + dy });
+      o.setCoords();
+    });
+    active.setCoords();
+  } else {
+    active.set({ left: active.left + dx, top: active.top + dy });
+    active.setCoords();
+  }
+  cv.requestRenderAll();
+  saveHistory();
+});
+
+// ── 스마트 스냅 가이드 (드래그 중) ───────────────────────
+(function initSnapGuides(){
+  const SNAP_THRESHOLD = 5; // px
+
+  function getGuideEls(){
+    return {
+      gh: document.getElementById('snap-guide-h'),
+      gv: document.getElementById('snap-guide-v'),
+    };
+  }
+  function hideGuides(){
+    const {gh, gv} = getGuideEls();
+    if(gh) gh.style.display = 'none';
+    if(gv) gv.style.display = 'none';
+  }
+  function showGuideH(y){
+    const {gh} = getGuideEls();
+    if(!gh) return;
+    gh.style.top = y + 'px';
+    gh.style.display = 'block';
+  }
+  function showGuideV(x){
+    const {gv} = getGuideEls();
+    if(!gv) return;
+    gv.style.left = x + 'px';
+    gv.style.display = 'block';
+  }
+
+  function hookSnap(){
+    if(!window.cv){ setTimeout(hookSnap, 200); return; }
+
+    cv.on('object:moving', function(opt){
+      const o = opt.target;
+      if(!o) return;
+      const cW = cv.width, cH = cv.height;
+      const bnd = o.getBoundingRect(true, true);
+      const oCx = bnd.left + bnd.width  / 2;
+      const oCy = bnd.top  + bnd.height / 2;
+
+      let snapX = null, snapY = null;
+
+      // 캔버스 중앙선 스냅
+      const canvasCX = cW / 2;
+      const canvasCY = cH / 2;
+      if(Math.abs(oCx - canvasCX) < SNAP_THRESHOLD){
+        snapX = canvasCX;
+        o.set('left', o.left + (canvasCX - oCx));
+      }
+      if(Math.abs(oCy - canvasCY) < SNAP_THRESHOLD){
+        snapY = canvasCY;
+        o.set('top', o.top + (canvasCY - oCy));
+      }
+
+      // 다른 객체 경계 스냅
+      const allObjs = cv.getObjects().filter(obj => obj !== o && obj.selectable !== false);
+      for(const other of allObjs){
+        const ob = other.getBoundingRect(true, true);
+        // 수평 스냅 라인 (상단/하단/중앙)
+        const hLines = [ob.top, ob.top + ob.height/2, ob.top + ob.height];
+        for(const hl of hLines){
+          // 현재 객체의 상단, 중앙, 하단과 비교
+          for(const oy of [bnd.top, bnd.top + bnd.height/2, bnd.top + bnd.height]){
+            if(Math.abs(oy - hl) < SNAP_THRESHOLD){
+              o.set('top', o.top + (hl - oy));
+              snapY = hl;
+              break;
+            }
+          }
+          if(snapY !== null) break;
+        }
+        // 수직 스냅 라인 (좌/중앙/우)
+        const vLines = [ob.left, ob.left + ob.width/2, ob.left + ob.width];
+        for(const vl of vLines){
+          for(const ox of [bnd.left, bnd.left + bnd.width/2, bnd.left + bnd.width]){
+            if(Math.abs(ox - vl) < SNAP_THRESHOLD){
+              o.set('left', o.left + (vl - ox));
+              snapX = vl;
+              break;
+            }
+          }
+          if(snapX !== null) break;
+        }
+        if(snapX !== null && snapY !== null) break;
+      }
+
+      // 가이드라인 표시
+      hideGuides();
+      if(snapY !== null) showGuideH(snapY);
+      if(snapX !== null) showGuideV(snapX);
+      o.setCoords();
+    });
+
+    cv.on('object:modified', hideGuides);
+    cv.on('mouse:up', hideGuides);
+    cv.on('selection:cleared', hideGuides);
+  }
+
+  hookSnap();
+})();
 </script>
 </body>
 </html>
