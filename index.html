@@ -283,7 +283,7 @@ select.pi{cursor:pointer}
 .qd-cell{border-bottom:1px solid #1a1a1a;display:flex;flex-direction:column;position:relative;overflow:hidden}
 .qd-cell.cell-orig{height:100px;flex-shrink:0}
 .qd-cell.cell-ref{height:100px;flex-shrink:0}
-.qd-cell.cell-prompt{height:200px;flex-shrink:0;padding:6px;display:flex;flex-direction:column}
+.qd-cell.cell-prompt{height:100px;flex-shrink:0;padding:6px;display:flex;flex-direction:column}
 .qd-cell.cell-result{flex:1;min-height:120px;display:flex;flex-direction:column}
 .qd-upload-zone{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;transition:all .2s;position:relative;overflow:hidden}
 .qd-upload-zone:hover{background:#1a1a1a}
@@ -333,13 +333,13 @@ select.pi{cursor:pointer}
 .qd-modal-send-btn:hover{background:#7c6fe0;color:#fff}
 .qd-modal-loading{position:absolute;inset:0;background:rgba(0,0,0,.75);display:none;align-items:center;justify-content:center;border-radius:6px;color:#a78bfa;font-size:12px;font-family:'Space Mono',monospace;letter-spacing:1px}
 .qd-modal-loading.show{display:flex}
-.qd-guide-panel{width:220px;min-width:200px;flex-shrink:0;background:#f8f9fa;border:1px solid #dee2e6;border-radius:8px;padding:16px 14px;overflow-y:auto;font-size:12px;line-height:1.6;align-self:stretch;margin:8px 8px 8px 0}
-.qd-guide-title{font-size:13px;font-weight:700;color:#333;margin-bottom:14px;border-bottom:2px solid #dee2e6;padding-bottom:8px}
+.qd-guide-panel{width:220px;min-width:200px;flex-shrink:0;background:#2a2440;border:1px solid #3d3560;border-radius:8px;padding:16px 14px;overflow-y:auto;font-size:12px;line-height:1.6;align-self:stretch;margin:8px 8px 8px 0;color:#c8b89a}
+.qd-guide-title{font-size:13px;font-weight:700;color:#f5e6c8;margin-bottom:14px;border-bottom:2px solid #3d3560;padding-bottom:8px}
 .qd-guide-section{margin-bottom:14px}
-.qd-guide-subtitle{font-weight:600;color:#495057;margin-bottom:4px}
-.qd-guide-order{color:#495057;margin-bottom:6px}
-.qd-guide-example{background:#e9ecef;border-radius:4px;padding:6px 8px;color:#6c757d;font-size:11px}
-.qd-guide-tip{background:#fff3cd;border-radius:4px;padding:8px 10px;color:#856404;font-size:11px;margin-top:10px}
+.qd-guide-subtitle{font-weight:600;color:#f5e6c8;margin-bottom:4px}
+.qd-guide-order{color:#c8b89a;margin-bottom:6px}
+.qd-guide-example{background:#1e1a33;border-radius:4px;padding:6px 8px;color:#a09080;font-size:11px}
+.qd-guide-tip{background:#332a50;border-radius:4px;padding:8px 10px;color:#f5e6c8;font-size:11px;margin-top:10px}
 
 </style>
 </head>
@@ -4718,14 +4718,14 @@ function qdRenderSections(){
 
     // Row 1: 공급사 원본
     const origCellContent=sec.orig
-      ?`<img class="qd-cell-img" src="${sec.orig}" onclick="event.stopPropagation();qdOpenModal(${idx},'orig')">
+      ?`<img class="qd-cell-img" src="${sec.orig}" onclick="event.preventDefault();event.stopPropagation();qdOpenModal(${idx},'orig')">
         <button class="qd-cell-clear" onclick="event.stopPropagation();qdClearSlot(${idx},'orig')">×</button>`
       :`<div class="qd-upload-ico">📦</div>
         <div class="qd-upload-label">공급사 원본<br><span class="qd-required-dot">*필수</span></div>`;
 
     // Row 2: 참고 이미지
     const refCellContent=sec.ref
-      ?`<img class="qd-cell-img" src="${sec.ref}" onclick="event.stopPropagation();qdOpenModal(${idx},'ref')">
+      ?`<img class="qd-cell-img" src="${sec.ref}" onclick="event.preventDefault();event.stopPropagation();qdOpenModal(${idx},'ref')">
         <button class="qd-cell-clear" onclick="event.stopPropagation();qdClearSlot(${idx},'ref')">×</button>`
       :`<div class="qd-upload-ico">🌅</div>
         <div class="qd-upload-label">참고 이미지<br><span style="color:#444">선택</span></div>`;
