@@ -1230,6 +1230,18 @@ function doLoad(file){
   r.readAsDataURL(file);
 }
 
+window.addEventListener('message', async (e) => {
+  if (!e.data || e.data.channel !== 'soulkit-transfer' || e.data.target !== 'image-editor') return;
+  const imageUrl = e.data.payload && e.data.payload.imageUrl;
+  if (!imageUrl) return;
+  // imageUrl은 이미 CORS 프록시를 거친 URL이라 그대로 fetch 가능함.
+  const res = await fetch(imageUrl);
+  const blob = await res.blob();
+  // 기존 doLoad 함수(파일업로드/드래그드롭과 동일)에 File로 감싸서 전달
+  const file = new File([blob], 'soulkit-transfer.jpg', { type: blob.type || 'image/jpeg' });
+  doLoad(file);
+});
+
 async function callOpenAI(base64,mime){
   const prompt=`이 이미지에서 한자(중국어)가 포함된 텍스트 블록만 감지해. 영어/숫자/기호만 있는 텍스트는 제외해. 영어+한자 혼합 줄은 한자 부분만 별도 bbox로 분리해서 추출해.
 
