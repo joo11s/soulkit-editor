@@ -349,7 +349,7 @@ select.pi{cursor:pointer}
 #mqTextCanvasWrap{position:relative;width:100%;background:#111;}
 #mqTextCanvas{display:block;width:100%;}
 #mqTextSheet{padding:16px;display:flex;flex-direction:column;gap:12px;background:#1a1a1a;}
-#mqTextInput{width:100%;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:8px;color:#f5e6c8;font-size:14px;padding:10px 12px;outline:none;font-family:'Noto Sans KR',sans-serif;}
+#mqTextInput{flex:1;min-width:0;background:#0a0a0a;border:1px solid #2a2a2a;border-radius:8px;color:#f5e6c8;font-size:14px;padding:10px 12px;outline:none;font-family:'Noto Sans KR',sans-serif;}
 #mqTextInput:focus{border-color:#f5e6c8;}
 .mq-sheet-label{font-size:10px;color:#888;letter-spacing:1px;margin-bottom:4px;}
 .mq-sheet-row{display:flex;align-items:center;gap:8px;}
@@ -359,8 +359,8 @@ select.pi{cursor:pointer}
 .mq-color-chip.on{border-color:#f5e6c8;transform:scale(1.15);}
 .mq-toggle-btn{background:#2a2a2a;border:1px solid #333;border-radius:6px;color:#888;font-size:11px;padding:5px 12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;transition:all .15s;}
 .mq-toggle-btn.on{background:#1a1209;border-color:#f5e6c8;color:#f5e6c8;}
-#mqTextAddBtn{flex:1;background:#2a2a2a;border:1px solid #333;border-radius:8px;color:#f5e6c8;font-size:13px;padding:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
-#mqTextDeleteBtn{background:#2a1010;border:1px solid #3a1010;border-radius:8px;color:#f87171;font-size:13px;padding:8px 12px;cursor:pointer;}
+#mqTextAddBtn{background:#2a2a2a;border:1px solid #333;border-radius:8px;color:#f5e6c8;font-size:13px;padding:8px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;white-space:nowrap;min-width:56px;}
+#mqTextDeleteBtn{background:#2a1010;border:1px solid #3a1010;border-radius:8px;color:#f87171;font-size:13px;padding:8px 12px;cursor:pointer;white-space:nowrap;min-width:56px;}
 #mqTextDoneBtn{width:100%;min-height:56px;background:#f5e6c8;color:#000;font-weight:700;font-size:15px;border:none;border-radius:12px;cursor:pointer;font-family:'Noto Sans KR',sans-serif;}
 #mqTextDoneBtn:hover{background:#ff8555;}
 /* 에러 메시지 */
@@ -1284,6 +1284,13 @@ select.pi{cursor:pointer}
     <div id="mqResultCompareHint">길게 누르면 원본과 비교</div>
     <div id="mqResultActions">
       <div class="mq-error" id="mqResultErr"></div>
+      <!-- 번역 없이 제거만 토글 (중국어 제거 작업에서만 표시) -->
+      <div id="mqNoTranslateRow" style="display:none;align-items:center;gap:10px;padding:8px 4px;">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;color:#aaa;font-family:'Noto Sans KR',sans-serif;">
+          <input type="checkbox" id="mqNoTranslateToggle" onchange="mqToggleNoTranslate()" style="accent-color:#f5e6c8;width:18px;height:18px;">
+          번역 없이 제거만
+        </label>
+      </div>
       <button class="mq-result-btn primary" onclick="mqSaveResult()">💾 저장 / 공유</button>
       <div class="mq-result-btn-row">
         <button class="mq-result-btn secondary" onclick="mqRetryLast()">🔄 다시 생성</button>
@@ -5317,6 +5324,8 @@ function qdDownloadResult(format){
   let _mqTextColor='#ffffff';
   let _mqTextBold=false;
   let _mqTextBgBox=false;
+  let _mqTranslationItems=null; // 중국어 제거 시 번역 아이템 목록
+  let _mqCleanedUrl=null;       // 번역 전 클린 이미지 URL (번역 없이 제거만 용)
   // 영역 지우기 캔버스
   let _mqEraseCanvas=null;   // HTMLCanvasElement
   let _mqEraseCtx=null;
@@ -5447,7 +5456,7 @@ function qdDownloadResult(format){
   }
 
   /* -------- 결과 표시 -------- */
-  window.mqShowResult=function(imageUrl, originalUrl){
+  window.mqShowResult=function(imageUrl, originalUrl, keepNoTranslateRow){
     _mqResultUrl=imageUrl;
     const img=document.getElementById('mqResultImg');
     const origImg=document.getElementById('mqResultOrigImg');
@@ -5458,8 +5467,13 @@ function qdDownloadResult(format){
       const wrap=document.getElementById('mqResultImgWrap');
       wrap.onpointerdown=()=>{ origImg.style.display='block'; };
       wrap.onpointerup=wrap.onpointerleave=()=>{ origImg.style.display='none'; };
+      document.getElementById('mqResultCompareHint').style.display='';
     } else {
       document.getElementById('mqResultCompareHint').style.display='none';
+    }
+    // 번역 없이 제거만 토글 — 명시적으로 keepNoTranslateRow=true 전달 시에만 유지
+    if(!keepNoTranslateRow){
+      document.getElementById('mqNoTranslateRow').style.display='none';
     }
     mqShowProgress(false);
     mqGoStep('result');
@@ -5532,19 +5546,95 @@ function qdDownloadResult(format){
   };
 
   /* ===== 작업1: 중국어 텍스트 제거 ===== */
+  // 번역 아이템을 클린 이미지 위에 canvas로 합성하여 dataUrl 반환
+  function _mqCompositeTranslations(cleanedUrl, items, origW, origH){
+    return new Promise((resolve)=>{
+      const img=new Image();
+      img.crossOrigin='anonymous';
+      img.onload=()=>{
+        const iW=img.naturalWidth||origW;
+        const iH=img.naturalHeight||origH;
+        const c=document.createElement('canvas');
+        c.width=iW; c.height=iH;
+        const ctx=c.getContext('2d');
+        ctx.drawImage(img,0,0,iW,iH);
+        items.forEach(item=>{
+          const displayText=item.translated||item.text_translated||'';
+          if(!displayText) return;
+          // bbox 기반 위치·크기 계산 (origW/origH 기준)
+          let left,top,width,bboxH;
+          if(item.bbox){
+            const scX=iW/origW, scY=iH/origH;
+            left=item.bbox.x*scX;
+            top=item.bbox.y*scY;
+            width=item.bbox.width*scX;
+            bboxH=item.bbox.height*scY;
+          } else {
+            left=(item.left/100)*iW;
+            top=(item.top/100)*iH;
+            width=((item.width||20)/100)*iW;
+            bboxH=((item.height||5)/100)*iH;
+          }
+          // 폰트 크기 계산 (role 비율 적용)
+          const ratio=ROLE_RATIO[item.role]||0.52;
+          let fs=Math.max(8, Math.min(Math.round(bboxH*ratio), 72));
+          // measureText 기반 축소 (2행 여유)
+          const tmpC=document.createElement('canvas');
+          const tctx=tmpC.getContext('2d');
+          while(fs>8){
+            tctx.font=`${fs}px "Noto Sans KR"`;
+            if(tctx.measureText(displayText).width<=width*2) break;
+            fs--;
+          }
+          // 텍스트 색상
+          let tc='#ffffff';
+          if(item.text_color&&/^#[0-9a-fA-F]{3,6}$/.test(item.text_color)) tc=item.text_color;
+          // 배경 박스 (가독성)
+          ctx.save();
+          ctx.font=`${item.font_weight||'bold'} ${fs}px "Noto Sans KR"`;
+          ctx.fillStyle='rgba(0,0,0,0.45)';
+          ctx.fillRect(left-2, top-2, width+4, bboxH+4);
+          // 텍스트 렌더링 (단순 단일행, 긴 텍스트는 잘림 방지를 위해 줄바꿈 처리)
+          ctx.fillStyle=tc;
+          ctx.textBaseline='top';
+          // 줄바꿈 처리: width에 맞게 wrapping
+          const words=displayText.split('');
+          let line='', lineY=top;
+          for(let i=0;i<words.length;i++){
+            const test=line+words[i];
+            if(ctx.measureText(test).width>width && line.length>0){
+              ctx.fillText(line, left, lineY);
+              line=words[i];
+              lineY+=fs*1.2;
+              if(lineY>top+bboxH+fs) break; // 영역 초과 시 중단
+            } else {
+              line=test;
+            }
+          }
+          if(line) ctx.fillText(line, left, lineY);
+          ctx.restore();
+        });
+        resolve(c.toDataURL('image/png'));
+      };
+      img.onerror=()=>resolve(cleanedUrl);
+      img.src=cleanedUrl;
+    });
+  }
+
   window.mqStartRemoveChinese=function(){
     if(!_mqDataUrl){toast('이미지를 먼저 선택하세요','err');return;}
     _mqLastTask='removeChinese';
+    _mqTranslationItems=null;
+    _mqCleanedUrl=null;
     document.getElementById('mqErrRemoveChinese').className='mq-error';
     mqShowProgress(true,'중국어 텍스트 분석 중...','텍스트 감지 + 제거 중 (10~30초)');
     mqGoStep('progress');
 
-    // 1) doLoad로 fabric 캔버스에 이미지 로드 후 autoProcess 실행
-    //    단, PC 에디터가 열려있지 않으므로 PC 탭 코드를 직접 실행
     const img=new Image();
     img.crossOrigin='anonymous';
     img.onload=async()=>{
-      // 직접 API 호출 (PC autoProcess와 동일한 파이프라인 사용)
+      const origW=img.naturalWidth;
+      const origH=img.naturalHeight;
       const base64=_mqDataUrl.split(',')[1];
       const mime=_mqDataUrl.split(';')[0].split(':')[1];
       try{
@@ -5557,6 +5647,8 @@ function qdDownloadResult(format){
         }
         if(!items||!items.length){
           mqShowProgress(false);
+          // 번역 없는 결과 — no-translate 토글 숨김
+          document.getElementById('mqNoTranslateRow').style.display='none';
           mqShowResult(_mqDataUrl,null);
           toast('감지된 중국어 텍스트 없음','ok');
           return;
@@ -5571,15 +5663,51 @@ function qdDownloadResult(format){
         const res=await fetch(GEMINI_EDIT_URL,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({base64,mimeType:mime,prompt:removePrompt})});
         const data=await res.json();
         if(!data.base64) throw new Error('결과 이미지 없음');
-        const resultUrl=`data:${data.mimeType||'image/png'};base64,${data.base64}`;
-        mqShowResult(resultUrl,_mqDataUrl);
-        toast('중국어 텍스트 제거 완료','ok');
+        const cleanedUrl=`data:${data.mimeType||'image/png'};base64,${data.base64}`;
+        _mqCleanedUrl=cleanedUrl;
+        _mqTranslationItems=items;
+        // 번역 텍스트 합성
+        mqShowProgress(true,'한국어 번역 삽입 중...','번역 텍스트를 이미지에 합성 중');
+        const composited=await _mqCompositeTranslations(cleanedUrl, items, origW, origH);
+        // 번역 없이 제거만 토글 표시 (초기값: 번역 포함)
+        const noTransRow=document.getElementById('mqNoTranslateRow');
+        noTransRow.style.display='flex';
+        document.getElementById('mqNoTranslateToggle').checked=false;
+        mqShowResult(composited, _mqDataUrl, true);
+        // 토글을 위해 composited URL도 저장
+        _mqResultUrl=composited;
+        toast('중국어 제거 + 한국어 번역 삽입 완료','ok');
       }catch(e){
         _showProgressError('오류: '+e.message);
       }
     };
     img.onerror=()=>{ _showProgressError('이미지 로드 실패'); };
     img.src=_mqDataUrl;
+  };
+
+  // 번역 없이 제거만 토글 처리
+  window.mqToggleNoTranslate=function(){
+    const checked=document.getElementById('mqNoTranslateToggle').checked;
+    if(!_mqCleanedUrl) return;
+    if(checked){
+      // 클린 이미지(번역 없음)으로 교체
+      _mqResultUrl=_mqCleanedUrl;
+    } else {
+      // 번역 합성 이미지가 없으면 재합성
+      if(_mqTranslationItems&&_mqTranslationItems.length){
+        const origImg=new Image();
+        origImg.crossOrigin='anonymous';
+        origImg.onload=async()=>{
+          const composited=await _mqCompositeTranslations(_mqCleanedUrl, _mqTranslationItems, origImg.naturalWidth, origImg.naturalHeight);
+          _mqResultUrl=composited;
+          document.getElementById('mqResultImg').src=composited;
+        };
+        origImg.src=_mqCleanedUrl;
+        return;
+      }
+      _mqResultUrl=_mqCleanedUrl;
+    }
+    document.getElementById('mqResultImg').src=_mqResultUrl;
   };
 
   /* ===== 작업2: 영역 지우기 ===== */
@@ -5985,6 +6113,10 @@ function qdDownloadResult(format){
     // 텍스트 캔버스 초기화
     if(_mqTextCanvas){ try{_mqTextCanvas.dispose();}catch(e){} _mqTextCanvas=null; }
     _mqTextObjs=[];
+    // 번역 상태 초기화
+    _mqTranslationItems=null;
+    _mqCleanedUrl=null;
+    document.getElementById('mqNoTranslateRow').style.display='none';
     // 1단계로 이동
     mqGoStep('photo');
     toast('초기화 완료');
