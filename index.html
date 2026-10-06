@@ -351,7 +351,7 @@ select.pi{cursor:pointer}
 
   /* 줌 버튼 터치 크기 확대 */
   #zoom-float button{min-width:44px;height:44px;font-size:18px;}
-  #zoom-float{right:12px;}
+  #zoom-float{right:12px;bottom:72px;top:auto;}
 }
 #mqHeader{
   display:flex;align-items:center;justify-content:space-between;
@@ -6454,8 +6454,32 @@ function qdDownloadResult(format){
     return window.innerWidth >= 768 && window.innerWidth <= 1024;
   }
 
+  function openDrawer(side) {
+    var left = document.querySelector('#tab-editor-content .left');
+    var right = document.querySelector('#tab-editor-content .right');
+    var overlay = document.getElementById('tablet-overlay');
+    if (side === 'left' && left) {
+      left.classList.add('tablet-left-open');
+      if (overlay) overlay.style.display = 'block';
+    } else if (side === 'right' && right) {
+      right.classList.add('tablet-right-open');
+      if (overlay) overlay.style.display = 'block';
+    }
+  }
+
+  function closeDrawers() {
+    var left = document.querySelector('#tab-editor-content .left');
+    var right = document.querySelector('#tab-editor-content .right');
+    var overlay = document.getElementById('tablet-overlay');
+    if (left) left.classList.remove('tablet-left-open');
+    if (right) right.classList.remove('tablet-right-open');
+    if (overlay) overlay.style.display = 'none';
+  }
+
+  // setupTabletUI: visibility update only — no listener registration
   function setupTabletUI() {
-    if (!isTablet()) return;
+    if (window.__tabletBound) return;
+    window.__tabletBound = true;
 
     var btnLeft = document.getElementById('tablet-btn-left');
     var btnRight = document.getElementById('tablet-btn-right');
@@ -6470,15 +6494,15 @@ function qdDownloadResult(format){
       fabric.Object.prototype.touchCornerSize = 32;
     }
 
-    // 객체 선택 시 배지 표시
+    // 객체 선택 시 배지 표시 (namespaced to prevent duplicates)
     if (typeof cv !== 'undefined' && cv) {
       cv.off('selection:created.tablet');
       cv.off('selection:cleared.tablet');
-      cv.on('selection:created', function() {
+      cv.on('selection:created.tablet', function() {
         var badge = document.getElementById('tablet-right-badge');
         if (badge) badge.classList.add('visible');
       });
-      cv.on('selection:cleared', function() {
+      cv.on('selection:cleared.tablet', function() {
         var badge = document.getElementById('tablet-right-badge');
         if (badge) badge.classList.remove('visible');
       });
@@ -6538,46 +6562,54 @@ function qdDownloadResult(format){
     }
   }
 
-  function openDrawer(side) {
-    var left = document.querySelector('#tab-editor-content .left');
-    var right = document.querySelector('#tab-editor-content .right');
-    var overlay = document.getElementById('tablet-overlay');
-    if (side === 'left' && left) {
-      left.classList.add('tablet-left-open');
-      if (overlay) overlay.classList.add('active');
-    } else if (side === 'right' && right) {
-      right.classList.add('tablet-right-open');
-      if (overlay) overlay.classList.add('active');
+  function updateTabletVisibility() {
+    var btnLeft = document.getElementById('tablet-btn-left');
+    var btnRight = document.getElementById('tablet-btn-right');
+    var aiToolbar = document.getElementById('tablet-ai-toolbar');
+    if (!isTablet()) {
+      if (btnLeft) btnLeft.style.display = 'none';
+      if (btnRight) btnRight.style.display = 'none';
+      if (aiToolbar) aiToolbar.style.display = 'none';
+      closeDrawers();
+    } else {
+      if (btnLeft) btnLeft.style.display = '';
+      if (btnRight) btnRight.style.display = '';
+      if (aiToolbar) aiToolbar.style.display = '';
     }
   }
 
-  function closeDrawers() {
-    var left = document.querySelector('#tab-editor-content .left');
-    var right = document.querySelector('#tab-editor-content .right');
-    var overlay = document.getElementById('tablet-overlay');
-    if (left) left.classList.remove('tablet-left-open');
-    if (right) right.classList.remove('tablet-right-open');
-    if (overlay) overlay.classList.remove('active');
-  }
-
-  document.addEventListener('DOMContentLoaded', function() {
+  // Register all click listeners once, immediately (script runs after DOM is built)
+  (function bindTabletListeners() {
     var btnLeft = document.getElementById('tablet-btn-left');
     var btnRight = document.getElementById('tablet-btn-right');
     var overlay = document.getElementById('tablet-overlay');
 
+    // #tablet-btn-left: toggle left drawer
     if (btnLeft) btnLeft.addEventListener('click', function() {
       var left = document.querySelector('#tab-editor-content .left');
-      if (left && left.classList.contains('tablet-left-open')) closeDrawers();
-      else { closeDrawers(); openDrawer('left'); }
+      if (left && left.classList.contains('tablet-left-open')) {
+        closeDrawers();
+      } else {
+        closeDrawers();
+        openDrawer('left');
+      }
     });
 
+    // #tablet-btn-right: toggle right drawer
     if (btnRight) btnRight.addEventListener('click', function() {
       var right = document.querySelector('#tab-editor-content .right');
-      if (right && right.classList.contains('tablet-right-open')) closeDrawers();
-      else { closeDrawers(); openDrawer('right'); }
+      if (right && right.classList.contains('tablet-right-open')) {
+        closeDrawers();
+      } else {
+        closeDrawers();
+        openDrawer('right');
+      }
     });
 
-    if (overlay) overlay.addEventListener('click', closeDrawers);
+    // #tablet-overlay: always close (unconditional)
+    if (overlay) overlay.addEventListener('click', function() {
+      closeDrawers();
+    });
 
     // 도구 서랍에서 버튼 클릭 시 300ms 후 닫기
     var leftPanel = document.querySelector('#tab-editor-content .left');
@@ -6591,26 +6623,16 @@ function qdDownloadResult(format){
       });
     }
 
-    // 화면 크기 변경 시 재설정
+    // 화면 크기 변경 시 가시성만 업데이트 (리스너 재등록 없음)
     window.addEventListener('resize', function() {
-      if (!isTablet()) {
-        var btnLeft2 = document.getElementById('tablet-btn-left');
-        var btnRight2 = document.getElementById('tablet-btn-right');
-        var aiToolbar2 = document.getElementById('tablet-ai-toolbar');
-        if (btnLeft2) btnLeft2.style.display = 'none';
-        if (btnRight2) btnRight2.style.display = 'none';
-        if (aiToolbar2) aiToolbar2.style.display = 'none';
-        closeDrawers();
-      } else {
-        setupTabletUI();
-      }
+      updateTabletVisibility();
     });
 
     // 초기 실행 — cv 초기화 이후를 위해 약간의 지연
     setTimeout(function() {
       setupTabletUI();
     }, 500);
-  });
+  })();
 })();
 </script>
 </body>
