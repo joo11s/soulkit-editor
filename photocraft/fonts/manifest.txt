@@ -1,0 +1,5 @@
+# family | style | file (relative to the site root) | scripts | licence | licence file
+Noto Sans CJK KR | Regular | fonts/noto-sans-cjk-kr/NotoSansCJKkr-Regular.otf | Hang,Latn | OFL-1.1 | fonts/noto-sans-cjk-kr/OFL.txt
+Noto Sans CJK KR | Medium | fonts/noto-sans-cjk-kr/NotoSansCJKkr-Medium.otf | Hang,Latn | OFL-1.1 | fonts/noto-sans-cjk-kr/OFL.txt
+Noto Sans CJK KR | Bold | fonts/noto-sans-cjk-kr/NotoSansCJKkr-Bold.otf | Hang,Latn | OFL-1.1 | fonts/noto-sans-cjk-kr/OFL.txt
+Noto Sans CJK KR | Black | fonts/noto-sans-cjk-kr/NotoSansCJKkr-Black.otf | Hang,Latn | OFL-1.1 | fonts/noto-sans-cjk-kr/OFL.txt
