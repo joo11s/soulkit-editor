@@ -279,7 +279,11 @@ select.pi{cursor:pointer}
   body{overflow:auto;height:auto;}
 }
 /* ========== 태블릿/폴드 펼친 화면 (768~1024px) ========== */
-@media(min-width:768px) and (max-width:1024px){
+/* PC(마우스)에서는 태블릿용 도구·속성 버튼과 하단 AI 툴바를 절대 보이지 않게 */
+@media not all and (min-width:768px) and (max-width:1024px) and (pointer:coarse){
+  #tablet-btn-left,#tablet-btn-right,#tablet-ai-toolbar,#tablet-overlay{display:none!important}
+}
+@media(min-width:768px) and (max-width:1024px) and (pointer:coarse){
   /* 헤더/탭줄/정렬 툴바 가로 스크롤 */
   .topbar .actions{overflow-x:auto;-webkit-overflow-scrolling:touch;flex-wrap:nowrap;}
   .topbar .actions button,.topbar .actions .mi-dl-group{flex-shrink:0;white-space:nowrap;}
@@ -6597,7 +6601,7 @@ function qdDownloadResult(format){
 // ========== 태블릿 레이아웃 (768~1024px) ==========
 (function() {
   function isTablet() {
-    return window.innerWidth >= 768 && window.innerWidth <= 1024;
+    return window.innerWidth >= 768 && window.innerWidth <= 1024 && window.matchMedia && window.matchMedia('(pointer:coarse)').matches;
   }
 
   function openDrawer(side) {
