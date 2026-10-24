@@ -520,6 +520,8 @@ select.pi{cursor:pointer}
 .tw-badge.working{background:#10202a;color:#60a5fa}
 .tw-badge.done{background:#102a18;color:#4ade80}
 .tw-badge.failed{background:#2a1010;color:#f87171}
+.tw-badge.approved{background:#1d1a2e;color:#c4b5fd}
+.tw-ghost.ok{border-color:#2f6b45;color:#4ade80}.tw-ghost.ok:hover{border-color:#4ade80;color:#4ade80}
 .tw-meta{font-size:10px;color:#666}
 .tw-req{font-size:12px;color:#ccc;line-height:1.6;white-space:pre-wrap;word-break:break-all}
 .tw-note{font-size:11px;color:#c8b89a}
@@ -1265,7 +1267,7 @@ select.pi{cursor:pointer}
       <div class="tw-toolbar">
         <div class="tw-h" style="flex:1">작업 목록</div>
         <div class="tw-filter" id="tw-filter">
-          <button data-f="" class="on">전체</button><button data-f="pending">대기</button><button data-f="done">완료</button>
+          <button data-f="" class="on">전체</button><button data-f="pending">대기</button><button data-f="done">완료</button><button data-f="approved">확인됨</button>
         </div>
         <button class="tw-ghost" id="tw-refresh">↻ 새로고침</button>
       </div>
@@ -6802,7 +6804,7 @@ function qdDownloadResult(format){
       chips:['1200x400','860x300','모바일 배너','할인 문구','기간 표시','브랜드 톤']}
   };
   const KIND_NAME=Object.fromEntries(Object.entries(KINDS).map(([k,v])=>[k,v.name]));
-  const ST={pending:'대기',working:'작업중',done:'완료',failed:'실패'};
+  const ST={pending:'대기',working:'작업중',done:'완료',failed:'실패',approved:'확인됨'};
   let files=[], kind='thumb', filter='', timer=null, inited=false;
   const $=id=>document.getElementById(id);
   const esc=t=>String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -6905,6 +6907,11 @@ function qdDownloadResult(format){
     try{const b=await getBlob(url);const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),5000);}
     catch(e){window.open(url,'_blank');}
   }
+  async function approve(id,btn){
+    btn.disabled=true;btn.textContent='처리 중…';
+    try{await call('soulkit-thumb-result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,status:'approved'})});msg('확인 처리했습니다','ok');load();}
+    catch(e){btn.disabled=false;btn.textContent='확인';msg('확인 처리 실패: '+e.message,'err');}
+  }
   async function remove(id){
     if(!window.confirm('이 작업을 목록에서 숨길까요?'))return;
     try{await call('soulkit-thumb-result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id,status:'deleted'})});load();}
@@ -6926,13 +6933,13 @@ function qdDownloadResult(format){
           <div class="tw-job-top"><span class="tw-badge ${esc(j.status)}">${esc(st)}</span>
             <span class="tw-kindtag">${esc(kn)}</span>
             <span class="tw-meta">${esc(j.biz)} · ${esc(j.count)}${unit} · ${esc(j.created_at)} · ${esc(j.id)}</span>
-            <span style="flex:1"></span><button class="tw-ghost danger" data-del="${esc(j.id)}">숨기기</button></div>
+            <span style="flex:1"></span>${j.status==='done'?`<button class="tw-ghost ok" data-ok="${esc(j.id)}" title="결과를 확인했습니다 (결재함 숫자에서 빠집니다)">확인</button>`:''}<button class="tw-ghost danger" data-del="${esc(j.id)}">숨기기</button></div>
           <div class="tw-req">${esc(j.request)}</div>
           ${j.note?`<div class="tw-note">💬 ${esc(j.note)}</div>`:''}
           ${res.length?`<div class="tw-results">${res.map((r,i)=>`<div class="tw-res">
               <img src="${esc(r.png)}" data-zoom="${esc(r.png)}" alt="">
               <div class="tw-res-bar"><span>${esc(r.label||('#'+(i+1)))}</span>
-                ${r.psd?`<button class="tw-ghost edit" data-edit="${esc(r.psd)}" data-name="${esc(j.id)}_${i+1}.psd" title="포토크래프트에서 레이어 수정">편집</button>`:''}
+                ${r.psd?`<button class="tw-ghost edit" data-edit="${esc(r.psd)}" data-name="${esc(j.id)}_${i+1}.psd" title="포토크래프트에서 레이어 수정">편집</button>`:(r.png?`<button class="tw-ghost edit" data-edit="${esc(r.png)}" data-name="${esc(j.id)}_${i+1}.png" title="포토크래프트에서 열어 수정 (통이미지)">편집</button>`:'')}
                 ${r.png?`<button class="tw-ghost" data-dl="${esc(r.png)}" data-name="${esc(j.id)}_${i+1}.png">PNG</button>`:''}
                 ${r.psd?`<button class="tw-ghost" data-dl="${esc(r.psd)}" data-name="${esc(j.id)}_${i+1}.psd">PSD</button>`:''}
               </div></div>`).join('')}</div>`:''}
@@ -6962,6 +6969,7 @@ function qdDownloadResult(format){
       const z=e.target.closest('[data-zoom]');if(z&&z.tagName==='IMG'){$('tw-zoom-img').src=z.dataset.zoom;$('tw-zoom').classList.add('show');return;}
       const ed=e.target.closest('[data-edit]');if(ed){openInPC(ed.dataset.edit,ed.dataset.name);return;}
       const dl=e.target.closest('[data-dl]');if(dl){download(dl.dataset.dl,dl.dataset.name);return;}
+      const ok=e.target.closest('[data-ok]');if(ok){approve(ok.dataset.ok,ok);return;}
       const del=e.target.closest('[data-del]');if(del)remove(del.dataset.del);
     });
     $('tw-zoom').addEventListener('click',()=>$('tw-zoom').classList.remove('show'));
