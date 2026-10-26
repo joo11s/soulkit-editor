@@ -457,6 +457,7 @@ select.pi{cursor:pointer}
 .tw-left{width:330px;flex-shrink:0;border-right:1px solid #222;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:14px}
 .tw-right{flex:1;display:flex;overflow:hidden;min-width:0}
 .tw-pc{flex:1;display:flex;flex-direction:column;min-width:0}
+.tw-srccut{display:block;width:100%;margin-top:4px;font-size:11px;padding:3px 0}
 .tw-pc-bar{display:flex;align-items:center;gap:8px;padding:8px 12px;border-bottom:1px solid #222;min-height:44px;box-sizing:border-box}
 .tw-pc-file{font-size:11px;color:#888;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .tw-pc-frame{flex:1;position:relative;background:#262626}
@@ -1258,6 +1259,7 @@ select.pi{cursor:pointer}
           <div class="tw-h">🖌 포토크래프트</div>
           <span class="tw-pc-file" id="tw-pc-file">결과의 '편집'을 누르면 여기서 PSD가 열립니다</span>
           <span style="flex:1"></span>
+          <button class="tw-ghost" id="tw-cut-open" title="사진에서 물건을 눌러 누끼 따기 (브라우저에서 바로 처리)">✂ 눌러서 누끼</button>
           <button class="tw-ghost" id="tw-pc-full" title="전체 화면">⛶ 전체 화면</button>
           <button class="tw-ghost" id="tw-side-toggle">작업 목록 접기 ▸</button>
         </div>
@@ -6883,12 +6885,12 @@ function qdDownloadResult(format){
     }
     throw new Error('포토크래프트가 아직 준비되지 않았습니다');
   }
-  async function openInPC(url,name){
+  async function openInPC(url,name,blobIn){
     const label=$('tw-pc-file');
     try{
       if($('tw-side').classList.contains('hide')===false&&window.innerWidth<1300)toggleSide(true);
       label.textContent=name+' 여는 중...';
-      const [w,blob]=await Promise.all([pcReady(),getBlob(url)]);
+      const [w,blob]=await Promise.all([pcReady(),blobIn?Promise.resolve(blobIn):getBlob(url)]);
       const d=w.document,c=d.getElementById('photocraft_canvas');
       const file=new w.File([blob],name,{type:/\.psd$/i.test(name)?'image/vnd.adobe.photoshop':(blob.type||'image/png')});
       const dt=new w.DataTransfer();dt.items.add(file);
@@ -6899,6 +6901,8 @@ function qdDownloadResult(format){
       pcFrame.focus();
     }catch(e){label.textContent='열기 실패: '+e.message;}
   }
+  window.__twOpenBlob=(blob,name)=>openInPC(null,name,blob);
+  window.__twGetBlob=getBlob;
   function toggleSide(force){
     const sd=$('tw-side');const hide=force===undefined?!sd.classList.contains('hide'):force;
     sd.classList.toggle('hide',hide);$('tw-side-toggle').textContent=hide?'◂ 작업 목록 펴기':'작업 목록 접기 ▸';
@@ -6928,7 +6932,7 @@ function qdDownloadResult(format){
       const kn=KIND_NAME[j.kind||'thumb']||j.kind;
       const unit=(j.kind==='detail')?'섹션':'장';
       return `<div class="tw-job">
-        ${srcs.length?`<div class="tw-srcwrap"><img class="tw-job-src" src="${esc(srcs[0])}" data-zoom="${esc(srcs[0])}" alt="">${srcs.length>1?`<span class="tw-srcn">+${srcs.length-1}</span>`:''}</div>`:''}
+        ${srcs.length?`<div class="tw-srcwrap"><img class="tw-job-src" src="${esc(srcs[0])}" data-zoom="${esc(srcs[0])}" alt="">${srcs.length>1?`<span class="tw-srcn">+${srcs.length-1}</span>`:''}<button class="tw-ghost tw-srccut" data-cut="${esc(srcs[0])}" data-name="${esc(j.id)}_src" title="원본 사진에서 눌러서 누끼">✂ 누끼</button></div>`:''}
         <div class="tw-job-body">
           <div class="tw-job-top"><span class="tw-badge ${esc(j.status)}">${esc(st)}</span>
             <span class="tw-kindtag">${esc(kn)}</span>
@@ -6940,6 +6944,7 @@ function qdDownloadResult(format){
               <img src="${esc(r.png)}" data-zoom="${esc(r.png)}" alt="">
               <div class="tw-res-bar"><span>${esc(r.label||('#'+(i+1)))}</span>
                 ${r.psd?`<button class="tw-ghost edit" data-edit="${esc(r.psd)}" data-name="${esc(j.id)}_${i+1}.psd" title="포토크래프트에서 레이어 수정">편집</button>`:(r.png?`<button class="tw-ghost edit" data-edit="${esc(r.png)}" data-name="${esc(j.id)}_${i+1}.png" title="포토크래프트에서 열어 수정 (통이미지)">편집</button>`:'')}
+                ${r.png?`<button class="tw-ghost" data-cut="${esc(r.png)}" data-name="${esc(j.id)}_${i+1}" title="눌러서 누끼">✂</button>`:''}
                 ${r.png?`<button class="tw-ghost" data-dl="${esc(r.png)}" data-name="${esc(j.id)}_${i+1}.png">PNG</button>`:''}
                 ${r.psd?`<button class="tw-ghost" data-dl="${esc(r.psd)}" data-name="${esc(j.id)}_${i+1}.psd">PSD</button>`:''}
               </div></div>`).join('')}</div>`:''}
@@ -6967,6 +6972,7 @@ function qdDownloadResult(format){
       [...$('tw-filter').children].forEach(x=>x.classList.toggle('on',x===b));render(lastJobs);});
     $('tw-jobs').addEventListener('click',e=>{
       const z=e.target.closest('[data-zoom]');if(z&&z.tagName==='IMG'){$('tw-zoom-img').src=z.dataset.zoom;$('tw-zoom').classList.add('show');return;}
+      const ct=e.target.closest('[data-cut]');if(ct){window.__cutOpen&&window.__cutOpen(ct.dataset.cut,ct.dataset.name);return;}
       const ed=e.target.closest('[data-edit]');if(ed){openInPC(ed.dataset.edit,ed.dataset.name);return;}
       const dl=e.target.closest('[data-dl]');if(dl){download(dl.dataset.dl,dl.dataset.name);return;}
       const ok=e.target.closest('[data-ok]');if(ok){approve(ok.dataset.ok,ok);return;}
@@ -6975,6 +6981,7 @@ function qdDownloadResult(format){
     $('tw-zoom').addEventListener('click',()=>$('tw-zoom').classList.remove('show'));
     $('tw-clear').addEventListener('click',()=>{files=[];drawFiles();});
     $('tw-side-toggle').addEventListener('click',()=>toggleSide());
+    $('tw-cut-open').addEventListener('click',()=>{$('cutWrap').hidden=false;});
     $('tw-pc-full').addEventListener('click',()=>{pcLoad();const f=pcFrame;(f.requestFullscreen||f.webkitRequestFullscreen||function(){}).call(f);});
   }
   function onShow(){init();pcLoad();load();clearInterval(timer);timer=setInterval(()=>{if(!document.hidden)load();},20000);}
@@ -6984,5 +6991,163 @@ function qdDownloadResult(format){
   window.SoulKitThumbs={load,submit,openInPC};
 })();
 </script>
+<!-- ✂ 눌러서 누끼 (SlimSAM · transformers.js, Apache-2.0 — 브라우저 안에서 실행, 서버 사용 없음) -->
+<div class="cut-wrap" id="cutWrap" hidden>
+  <div class="cut-box" role="dialog" aria-modal="true" aria-label="눌러서 누끼">
+    <div class="cut-head">
+      <b>✂ 눌러서 누끼</b>
+      <span class="cut-status" id="cutStatus">사진을 올리면 시작합니다</span>
+      <span style="flex:1"></span>
+      <label class="tw-ghost cut-filebtn">사진 열기<input type="file" accept="image/*" id="cutFile" hidden></label>
+      <button class="tw-ghost" id="cutUndo" disabled>되돌리기</button>
+      <button class="tw-ghost" id="cutReset" disabled>점 지우기</button>
+      <button class="tw-ghost" id="cutClose" aria-label="닫기">✕</button>
+    </div>
+    <div class="cut-body">
+      <div class="cut-stage" id="cutStage">
+        <div class="cut-drop" id="cutDrop">여기로 사진을 끌어다 놓거나 [사진 열기]를 누르세요</div>
+        <canvas id="cutCanvas" hidden></canvas>
+      </div>
+      <div class="cut-side">
+        <div class="cut-help">
+          <p><b>왼쪽 클릭</b> — 딸 물건을 누르세요 (초록 점)</p>
+          <p><b>오른쪽 클릭</b> 또는 <b>Alt+클릭</b> — 빼고 싶은 부분 (빨간 점)</p>
+          <p>여러 번 눌러서 다듬을 수 있습니다. 처음 한 번은 모델을 받느라 조금 걸리고, 그다음부터는 빠릅니다.</p>
+          <p class="cut-tip">투명 케이스는 흰 바탕에서 찍은 사진이 가장 깔끔합니다.</p>
+        </div>
+        <div class="cut-prev-wrap"><div class="cut-prev-label">결과 미리보기</div><canvas id="cutPrev"></canvas></div>
+        <label class="cut-opt"><input type="checkbox" id="cutTrim" checked> 여백 잘라내기</label>
+        <button class="tw-btn" id="cutToPC" disabled>포토크래프트로 보내기</button>
+        <button class="tw-ghost cut-wide" id="cutSave" disabled>PNG 저장</button>
+      </div>
+    </div>
+  </div>
+</div>
+<style>
+.cut-wrap{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center}
+.cut-wrap[hidden]{display:none}
+.cut-box{width:min(1280px,calc(100vw - 32px));height:min(860px,calc(100vh - 32px));background:#161616;border:1px solid #333;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;color:#eee}
+.cut-head{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a}
+.cut-status{font-size:12px;color:#999;margin-left:6px}
+.cut-filebtn{cursor:pointer}
+.cut-body{flex:1;min-height:0;display:flex}
+.cut-stage{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;background:repeating-conic-gradient(#202020 0 25%,#1a1a1a 0 50%) 0 0/20px 20px;position:relative}
+.cut-stage canvas{max-width:100%;max-height:100%;cursor:crosshair}
+.cut-drop{border:1px dashed #444;border-radius:10px;padding:40px 30px;color:#888;font-size:13px}
+.cut-stage.drag .cut-drop{border-color:#f0d9a8;color:#f0d9a8}
+.cut-side{width:300px;flex:none;border-left:1px solid #2a2a2a;padding:14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
+.cut-help p{font-size:12px;color:#aaa;margin:0 0 6px;line-height:1.5}.cut-help b{color:#eee;font-weight:500}
+.cut-tip{color:#f0d9a8!important}
+.cut-prev-wrap{background:repeating-conic-gradient(#2a2a2a 0 25%,#222 0 50%) 0 0/14px 14px;border:1px solid #333;border-radius:8px;padding:8px;min-height:160px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.cut-prev-label{font-size:11px;color:#888;align-self:flex-start;margin-bottom:6px}
+#cutPrev{max-width:100%;max-height:260px}
+.cut-opt{font-size:12px;color:#aaa;display:flex;gap:6px;align-items:center}
+.cut-wide{width:100%}
+</style>
+<script type="module">
+const TJS = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2';
+const MODEL = 'Xenova/slimsam-77-uniform';
+const $ = id => document.getElementById(id);
+let T = null, model = null, processor = null, loading = null;
+let img = null, imgInputs = null, emb = null, points = [], mask = null, srcName = 'cutout';
+const cv = $('cutCanvas'), ctx = cv.getContext('2d'), pv = $('cutPrev');
+const status = t => $('cutStatus').textContent = t;
+async function ensureModel() {
+  if (model) return; if (loading) return loading;
+  loading = (async () => {
+    status('누끼 모델 준비 중… (처음 한 번만 수십 MB 받습니다)');
+    T = await import(TJS);
+    let dev = 'wasm'; try { if (navigator.gpu && await navigator.gpu.requestAdapter()) dev = 'webgpu'; } catch (_) {}
+    try { model = await T.SamModel.from_pretrained(MODEL, { device: dev, dtype: dev === 'webgpu' ? 'fp16' : 'q8' }); }
+    catch (e) { model = await T.SamModel.from_pretrained(MODEL, { device: 'wasm', dtype: 'q8' }); }
+    processor = await T.AutoProcessor.from_pretrained(MODEL);
+  })();
+  return loading;
+}
+async function openBlob(blob, name) {
+  $('cutWrap').hidden = false; srcName = String(name || 'cutout').replace(/\.[a-z0-9]+$/i, '');
+  points = []; mask = null; drawPrev(); btns();
+  const url = URL.createObjectURL(blob);
+  img = await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => no(new Error('이미지를 읽지 못했습니다')); im.src = url; });
+  cv.width = img.naturalWidth; cv.height = img.naturalHeight; cv.hidden = false; $('cutDrop').hidden = true; draw();
+  try {
+    await ensureModel();
+    status('사진 분석 중…');
+    const raw = await T.RawImage.fromURL(url);
+    imgInputs = await processor(raw);
+    emb = await model.get_image_embeddings(imgInputs);
+    status('준비 완료 — 딸 물건을 누르세요');
+  } catch (e) { status('준비 실패: ' + e.message); console.error(e); }
+}
+function draw() {
+  if (!img) return;
+  ctx.clearRect(0, 0, cv.width, cv.height); ctx.drawImage(img, 0, 0);
+  if (mask) {  // 선택 영역 밖을 어둡게
+    const o = ctx.getImageData(0, 0, cv.width, cv.height), d = o.data;
+    for (let i = 0, p = 0; p < mask.length; p++, i += 4) if (!mask[p]) { d[i] *= .35; d[i + 1] *= .35; d[i + 2] *= .35; }
+    ctx.putImageData(o, 0, 0);
+  }
+  const r = Math.max(5, Math.round(Math.min(cv.width, cv.height) / 90));
+  points.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7); ctx.fillStyle = p.l ? '#22c55e' : '#ef4444'; ctx.fill(); ctx.lineWidth = Math.max(2, r / 3); ctx.strokeStyle = '#fff'; ctx.stroke(); });
+}
+async function decode() {
+  if (!emb || !points.length) { mask = null; draw(); drawPrev(); btns(); return; }
+  status('누끼 계산 중…');
+  const rs = imgInputs.reshaped_input_sizes[0];
+  const pts = points.map(p => [p.x / cv.width * rs[1], p.y / cv.height * rs[0]]);
+  const input_points = new T.Tensor('float32', pts.flat(), [1, 1, pts.length, 2]);
+  const input_labels = new T.Tensor('int64', points.map(p => BigInt(p.l)), [1, 1, pts.length]);
+  const out = await model({ ...emb, input_points, input_labels });
+  const masks = await processor.post_process_masks(out.pred_masks, imgInputs.original_sizes, imgInputs.reshaped_input_sizes);
+  const sc = out.iou_scores.data; let best = 0; for (let i = 1; i < sc.length; i++) if (sc[i] > sc[best]) best = i;
+  const m = masks[0], W = m.dims[3], H = m.dims[2], off = best * W * H;
+  mask = new Uint8Array(W * H); for (let i = 0; i < W * H; i++) mask[i] = m.data[off + i] ? 1 : 0;
+  draw(); drawPrev(); btns(); status('정확도 ' + Math.round(sc[best] * 100) + '% — 더 누르면 다듬어집니다');
+}
+function cutCanvas() {  // 원본 해상도로 잘라낸 투명 PNG 캔버스
+  const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const x = c.getContext('2d');
+  x.drawImage(img, 0, 0); const o = x.getImageData(0, 0, c.width, c.height), d = o.data;
+  let minX = c.width, minY = c.height, maxX = -1, maxY = -1;
+  for (let y = 0; y < c.height; y++) for (let xx = 0; xx < c.width; xx++) { const p = y * c.width + xx; if (!mask[p]) d[p * 4 + 3] = 0; else { if (xx < minX) minX = xx; if (xx > maxX) maxX = xx; if (y < minY) minY = y; if (y > maxY) maxY = y; } }
+  x.putImageData(o, 0, 0);
+  if (!$('cutTrim').checked || maxX < 0) return c;
+  const pad = Math.round(Math.max(maxX - minX, maxY - minY) * 0.02);
+  minX = Math.max(0, minX - pad); minY = Math.max(0, minY - pad); maxX = Math.min(c.width - 1, maxX + pad); maxY = Math.min(c.height - 1, maxY + pad);
+  const t = document.createElement('canvas'); t.width = maxX - minX + 1; t.height = maxY - minY + 1; t.getContext('2d').drawImage(c, -minX, -minY); return t;
+}
+function drawPrev() {
+  const x = pv.getContext('2d');
+  if (!mask) { pv.width = 1; pv.height = 1; x.clearRect(0, 0, 1, 1); return; }
+  const c = cutCanvas(), s = Math.min(1, 520 / Math.max(c.width, c.height)); pv.width = Math.round(c.width * s); pv.height = Math.round(c.height * s); x.drawImage(c, 0, 0, pv.width, pv.height);
+}
+function btns() { const has = !!mask; $('cutToPC').disabled = !has; $('cutSave').disabled = !has; $('cutUndo').disabled = !points.length; $('cutReset').disabled = !points.length; }
+const toBlob = () => new Promise(r => cutCanvas().toBlob(r, 'image/png'));
+function addPoint(e, label) {
+  if (!emb) { status(img ? '아직 분석 중입니다. 잠시만요…' : '사진부터 올려 주세요'); return; }
+  const r = cv.getBoundingClientRect(); points.push({ x: (e.clientX - r.left) / r.width * cv.width, y: (e.clientY - r.top) / r.height * cv.height, l: label });
+  draw(); decode().catch(err => status('오류: ' + err.message));
+}
+cv.addEventListener('click', e => addPoint(e, e.altKey ? 0 : 1));
+cv.addEventListener('contextmenu', e => { e.preventDefault(); addPoint(e, 0); });
+$('cutUndo').onclick = () => { points.pop(); decode(); };
+$('cutReset').onclick = () => { points = []; decode(); };
+$('cutTrim').onchange = drawPrev;
+$('cutClose').onclick = () => { $('cutWrap').hidden = true; };
+$('cutFile').onchange = e => { const f = e.target.files[0]; if (f) openBlob(f, f.name); e.target.value = ''; };
+const st = $('cutStage');
+st.addEventListener('dragover', e => { e.preventDefault(); st.classList.add('drag'); });
+st.addEventListener('dragleave', () => st.classList.remove('drag'));
+st.addEventListener('drop', e => { e.preventDefault(); st.classList.remove('drag'); const f = [...e.dataTransfer.files].find(x => /^image\//.test(x.type)); if (f) openBlob(f, f.name); });
+$('cutSave').onclick = async () => { const b = await toBlob(); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = srcName + '_누끼.png'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); };
+$('cutToPC').onclick = async () => { const b = await toBlob(); $('cutWrap').hidden = true; if (window.__twOpenBlob) window.__twOpenBlob(b, srcName + '_누끼.png'); };
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('cutWrap').hidden) $('cutWrap').hidden = true; });
+// 외부에서 열기: window.__cutOpen(blob 또는 url, 이름)
+window.__cutOpen = async (src, name) => {
+  $('cutWrap').hidden = false;
+  try { const b = src instanceof Blob ? src : await (window.__twGetBlob ? window.__twGetBlob(src) : fetch(src).then(r => r.blob())); await openBlob(b, name); }
+  catch (e) { status('사진을 열지 못했습니다: ' + e.message); }
+};
+</script>
+
 </body>
 </html>
