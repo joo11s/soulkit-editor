@@ -6991,28 +6991,39 @@ function qdDownloadResult(format){
   window.SoulKitThumbs={load,submit,openInPC};
 })();
 </script>
-<!-- ✂ 눌러서 누끼 (SlimSAM · transformers.js, Apache-2.0 — 브라우저 안에서 실행, 서버 사용 없음) -->
+<!-- ✂ 눌러서 누끼 (SAM · transformers.js, Apache-2.0 — 브라우저 안에서 실행, 서버 사용 없음) -->
 <div class="cut-wrap" id="cutWrap" hidden>
   <div class="cut-box" role="dialog" aria-modal="true" aria-label="눌러서 누끼">
     <div class="cut-head">
       <b>✂ 눌러서 누끼</b>
       <span class="cut-status" id="cutStatus">사진을 올리면 시작합니다</span>
       <span style="flex:1"></span>
+      <div class="cut-mode" id="cutMode" title="정밀: 테두리가 더 정확(처음 받는 용량이 큼) · 빠른: 가볍고 빠름">
+        <button data-m="precise">정밀</button><button data-m="fast">빠른</button>
+      </div>
+      <button class="tw-ghost" id="cutBack" hidden title="잘라내기 전 전체 사진으로">← 전체 사진</button>
       <label class="tw-ghost cut-filebtn">사진 열기<input type="file" accept="image/*" id="cutFile" hidden></label>
       <button class="tw-ghost" id="cutUndo" disabled>되돌리기</button>
       <button class="tw-ghost" id="cutReset" disabled>점 지우기</button>
       <button class="tw-ghost" id="cutClose" aria-label="닫기">✕</button>
     </div>
     <div class="cut-body">
-      <div class="cut-stage" id="cutStage">
-        <div class="cut-drop" id="cutDrop">여기로 사진을 끌어다 놓거나 [사진 열기]를 누르세요</div>
-        <canvas id="cutCanvas" hidden></canvas>
+      <div class="cut-stagewrap">
+        <div class="cut-zoom" id="cutZoomBar" hidden>
+          <button data-z="fit" title="화면에 맞춤">맞춤</button><button data-z="-">−</button><span id="cutZoomTxt">100%</span><button data-z="+">+</button>
+          <span class="cut-ztip">끌어서 네모를 그리면 그 부분만 잘라서 땁니다</span>
+        </div>
+        <div class="cut-stage" id="cutStage">
+          <div class="cut-drop" id="cutDrop">여기로 사진을 끌어다 놓거나 [사진 열기]를 누르세요</div>
+          <div class="cut-canvasbox" id="cutBoxC" hidden><canvas id="cutCanvas"></canvas><div class="cut-rect" id="cutRect" hidden></div></div>
+        </div>
       </div>
       <div class="cut-side">
         <div class="cut-help">
-          <p><b>왼쪽 클릭</b> — 딸 물건을 누르세요 (초록 점)</p>
+          <p><b>클릭</b> — 딸 물건을 누르세요 (초록 점)</p>
           <p><b>오른쪽 클릭</b> 또는 <b>Alt+클릭</b> — 빼고 싶은 부분 (빨간 점)</p>
-          <p>여러 번 눌러서 다듬을 수 있습니다. 처음 한 번은 모델을 받느라 조금 걸리고, 그다음부터는 빠릅니다.</p>
+          <p><b>끌어서 네모</b> — 긴 상세페이지는 제품이 있는 부분을 네모로 그려 잘라낸 뒤 누르세요. 훨씬 정확해집니다.</p>
+          <p><b>Ctrl+휠</b> 또는 위쪽 +/−로 확대·축소, 휠로 위아래 이동</p>
           <p class="cut-tip">투명 케이스는 흰 바탕에서 찍은 사진이 가장 깔끔합니다.</p>
         </div>
         <div class="cut-prev-wrap"><div class="cut-prev-label">결과 미리보기</div><canvas id="cutPrev"></canvas></div>
@@ -7027,14 +7038,26 @@ function qdDownloadResult(format){
 <style>
 .cut-wrap{position:fixed;inset:0;z-index:9000;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center}
 .cut-wrap[hidden]{display:none}
-.cut-box{width:min(1280px,calc(100vw - 32px));height:min(860px,calc(100vh - 32px));background:#161616;border:1px solid #333;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;color:#eee}
-.cut-head{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a}
+.cut-box{width:calc(100vw - 24px);height:calc(100vh - 24px);max-width:1600px;background:#161616;border:1px solid #333;border-radius:12px;display:flex;flex-direction:column;overflow:hidden;color:#eee}
+.cut-head{display:flex;align-items:center;gap:8px;padding:10px 14px;border-bottom:1px solid #2a2a2a;flex-wrap:wrap}
 .cut-status{font-size:12px;color:#999;margin-left:6px}
 .cut-filebtn{cursor:pointer}
+.cut-mode{display:flex;border:1px solid #3a3a3a;border-radius:7px;overflow:hidden}
+.cut-mode button{background:#1e1e1e;border:0;color:#999;font:inherit;font-size:12px;padding:5px 12px;cursor:pointer}
+.cut-mode button.on{background:#3a3226;color:#f0d9a8}
 .cut-body{flex:1;min-height:0;display:flex}
-.cut-stage{flex:1;min-width:0;display:flex;align-items:center;justify-content:center;background:repeating-conic-gradient(#202020 0 25%,#1a1a1a 0 50%) 0 0/20px 20px;position:relative}
-.cut-stage canvas{max-width:100%;max-height:100%;cursor:crosshair}
-.cut-drop{border:1px dashed #444;border-radius:10px;padding:40px 30px;color:#888;font-size:13px}
+.cut-stagewrap{flex:1;min-width:0;display:flex;flex-direction:column}
+.cut-zoom{display:flex;align-items:center;gap:6px;padding:6px 10px;border-bottom:1px solid #2a2a2a;font-size:12px;color:#aaa}
+.cut-zoom[hidden]{display:none}
+.cut-zoom button{background:#222;border:1px solid #3a3a3a;color:#ccc;border-radius:6px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer}
+.cut-zoom #cutZoomTxt{min-width:44px;text-align:center}
+.cut-ztip{margin-left:auto;color:#777}
+.cut-stage{flex:1;min-height:0;overflow:auto;background:repeating-conic-gradient(#202020 0 25%,#1a1a1a 0 50%) 0 0/20px 20px;position:relative;display:flex}
+.cut-canvasbox{position:relative;margin:auto;flex:none}
+.cut-canvasbox[hidden]{display:none}
+.cut-canvasbox canvas{display:block;width:100%;height:100%;cursor:crosshair;user-select:none}
+.cut-rect{position:absolute;border:2px dashed #f0d9a8;background:rgba(240,217,168,.12);pointer-events:none}
+.cut-drop{margin:auto;border:1px dashed #444;border-radius:10px;padding:40px 30px;color:#888;font-size:13px}
 .cut-stage.drag .cut-drop{border-color:#f0d9a8;color:#f0d9a8}
 .cut-side{width:300px;flex:none;border-left:1px solid #2a2a2a;padding:14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto}
 .cut-help p{font-size:12px;color:#aaa;margin:0 0 6px;line-height:1.5}.cut-help b{color:#eee;font-weight:500}
@@ -7050,48 +7073,79 @@ function qdDownloadResult(format){
 </style>
 <script type="module">
 const TJS = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2';
-const MODEL = 'Xenova/slimsam-77-uniform';
+const MODELS = { precise: 'Xenova/sam-vit-base', fast: 'Xenova/slimsam-77-uniform' };
 const $ = id => document.getElementById(id);
-let T = null, model = null, processor = null, loading = null;
-let img = null, imgInputs = null, emb = null, points = [], mask = null, srcName = 'cutout', all3 = null, mi = -1, scores = [];
-const cv = $('cutCanvas'), ctx = cv.getContext('2d'), pv = $('cutPrev');
+let mode = 'precise'; try { mode = localStorage.getItem('cut-mode') || 'precise'; } catch (_) {}
+let T = null, model = null, processor = null, loadedMode = null, loading = null;
+let img = null, imgURL = null, imgInputs = null, emb = null, points = [], mask = null, srcName = 'cutout', all3 = null, mi = -1;
+let orig = null;   // 잘라내기 전 전체 사진 {blob, name}
+let zoom = 1, fitZoom = 1;
+const cv = $('cutCanvas'), ctx = cv.getContext('2d'), pv = $('cutPrev'), box = $('cutBoxC'), stage = $('cutStage');
 const status = t => $('cutStatus').textContent = t;
+function paintMode() { [...$('cutMode').children].forEach(b => b.classList.toggle('on', b.dataset.m === mode)); }
+paintMode();
 async function ensureModel() {
-  if (model) return; if (loading) return loading;
-  loading = (async () => {
-    status('누끼 모델 준비 중… (처음 한 번만 수십 MB 받습니다)');
-    T = await import(TJS);
+  if (model && loadedMode === mode) return;
+  if (loading && loading.mode === mode) return loading.p;
+  const want = mode;
+  const p = (async () => {
+    status((want === 'precise' ? '정밀' : '빠른') + ' 모델 준비 중… (처음 한 번만 받습니다' + (want === 'precise' ? ', 100MB 안팎' : '') + ')');
+    T = T || await import(TJS);
     let dev = 'wasm'; try { if (navigator.gpu && await navigator.gpu.requestAdapter()) dev = 'webgpu'; } catch (_) {}
-    try { model = await T.SamModel.from_pretrained(MODEL, { device: dev, dtype: dev === 'webgpu' ? 'fp16' : 'q8' }); }
-    catch (e) { model = await T.SamModel.from_pretrained(MODEL, { device: 'wasm', dtype: 'q8' }); }
-    processor = await T.AutoProcessor.from_pretrained(MODEL);
+    let m;
+    try { m = await T.SamModel.from_pretrained(MODELS[want], { device: dev, dtype: dev === 'webgpu' ? 'fp16' : 'q8' }); }
+    catch (e) { m = await T.SamModel.from_pretrained(MODELS[want], { device: 'wasm', dtype: 'q8' }); }
+    const pr = await T.AutoProcessor.from_pretrained(MODELS[want]);
+    model = m; processor = pr; loadedMode = want;
   })();
-  return loading;
+  loading = { mode: want, p };
+  return p;
 }
-async function openBlob(blob, name) {
+function fit() {
+  if (!img) return;
+  const W = stage.clientWidth - 24, H = stage.clientHeight - 24;
+  const tall = img.naturalHeight / img.naturalWidth > 2.2;
+  fitZoom = tall ? Math.min(1, W / img.naturalWidth) : Math.min(3, W / img.naturalWidth, H / img.naturalHeight);  // 작은 조각은 크게 보여 줌
+  setZoom(fitZoom);
+}
+function setZoom(z) {
+  zoom = Math.max(0.05, Math.min(4, z));
+  box.style.width = Math.round(img.naturalWidth * zoom) + 'px'; box.style.height = Math.round(img.naturalHeight * zoom) + 'px';
+  $('cutZoomTxt').textContent = Math.round(zoom * 100) + '%';
+}
+async function openBlob(blob, name, keepOrig) {
   $('cutWrap').hidden = false; srcName = String(name || 'cutout').replace(/\.[a-z0-9]+$/i, '');
-  points = []; mask = null; all3 = null; mi = -1; drawPrev(); btns();
-  const url = URL.createObjectURL(blob);
-  img = await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => no(new Error('이미지를 읽지 못했습니다')); im.src = url; });
-  cv.width = img.naturalWidth; cv.height = img.naturalHeight; cv.hidden = false; $('cutDrop').hidden = true; draw();
+  if (!keepOrig) { orig = null; $('cutBack').hidden = true; }
+  points = []; mask = null; all3 = null; mi = -1; emb = null; drawPrev(); btns();
+  if (imgURL) URL.revokeObjectURL(imgURL);
+  imgURL = URL.createObjectURL(blob);
+  img = await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => no(new Error('이미지를 읽지 못했습니다')); im.src = imgURL; });
+  cv.width = img.naturalWidth; cv.height = img.naturalHeight; box.hidden = false; $('cutDrop').hidden = true; $('cutZoomBar').hidden = false;
+  fit(); stage.scrollTop = 0; draw();
+  if (!keepOrig && img.naturalHeight / img.naturalWidth > 2.2) status('긴 사진입니다 — 제품이 있는 부분을 끌어서 네모로 그려 주세요');
+  await analyze();
+}
+async function analyze() {
   try {
     await ensureModel();
     status('사진 분석 중…');
-    const raw = await T.RawImage.fromURL(url);
+    const raw = await T.RawImage.fromURL(imgURL);
     imgInputs = await processor(raw);
     emb = await model.get_image_embeddings(imgInputs);
-    status('준비 완료 — 딸 물건을 누르세요');
+    const tall = img.naturalHeight / img.naturalWidth > 2.2 && !orig;
+    status(tall ? '긴 사진입니다 — 제품 부분을 끌어서 네모로 그리면 더 정확합니다 (바로 눌러도 됩니다)' : '준비 완료 — 딸 물건을 누르세요');
+    if (points.length) await decode();
   } catch (e) { status('준비 실패: ' + e.message); console.error(e); }
 }
 function draw() {
   if (!img) return;
   ctx.clearRect(0, 0, cv.width, cv.height); ctx.drawImage(img, 0, 0);
-  if (mask) {  // 선택 영역 밖을 어둡게
+  if (mask) {
     const o = ctx.getImageData(0, 0, cv.width, cv.height), d = o.data;
     for (let i = 0, p = 0; p < mask.length; p++, i += 4) if (!mask[p]) { d[i] *= .35; d[i + 1] *= .35; d[i + 2] *= .35; }
     ctx.putImageData(o, 0, 0);
   }
-  const r = Math.max(5, Math.round(Math.min(cv.width, cv.height) / 90));
+  const r = Math.max(5, Math.round(7 / zoom));
   points.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7); ctx.fillStyle = p.l ? '#22c55e' : '#ef4444'; ctx.fill(); ctx.lineWidth = Math.max(2, r / 3); ctx.strokeStyle = '#fff'; ctx.stroke(); });
 }
 async function decode() {
@@ -7104,8 +7158,7 @@ async function decode() {
   const out = await model({ ...emb, input_points, input_labels });
   const masks = await processor.post_process_masks(out.pred_masks, imgInputs.original_sizes, imgInputs.reshaped_input_sizes);
   const sc = out.iou_scores.data; let best = 0; for (let i = 1; i < sc.length; i++) if (sc[i] > sc[best]) best = i;
-  const m = masks[0], W = m.dims[3], H = m.dims[2]; scores = [...sc];
-  // 후보 3개를 면적 순(작게→크게)으로 정렬해 둠
+  const m = masks[0], W = m.dims[3], H = m.dims[2];
   all3 = [0, 1, 2].map(k => { const a = new Uint8Array(W * H); let n = 0; for (let i = 0; i < W * H; i++) { a[i] = m.data[k * W * H + i] ? 1 : 0; n += a[i]; } return { a, n, s: sc[k], k }; }).sort((x, y) => x.n - y.n);
   if (mi < 0 || points.length === 1) mi = all3.findIndex(x => x.k === best);
   pick(mi);
@@ -7115,8 +7168,8 @@ function pick(i) {
   [...document.querySelectorAll('#cutRange button')].forEach((b, k) => { b.classList.toggle('on', k === i); b.innerHTML = ['작게', '중간', '크게'][k] + '<small>' + Math.round(all3[k].s * 100) + '%</small>'; });
   draw(); drawPrev(); btns(); status('정확도 ' + Math.round(all3[i].s * 100) + '% — 범위를 바꾸거나 더 눌러서 다듬으세요');
 }
-document.getElementById('cutRange').addEventListener('click', e => { const b = e.target.closest('[data-mi]'); if (b && all3) pick(Number(b.dataset.mi)); });
-function cutCanvas() {  // 원본 해상도로 잘라낸 투명 PNG 캔버스
+$('cutRange').addEventListener('click', e => { const b = e.target.closest('[data-mi]'); if (b && all3) pick(Number(b.dataset.mi)); });
+function cutCanvas() {
   const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const x = c.getContext('2d');
   x.drawImage(img, 0, 0); const o = x.getImageData(0, 0, c.width, c.height), d = o.data;
   let minX = c.width, minY = c.height, maxX = -1, maxY = -1;
@@ -7134,26 +7187,63 @@ function drawPrev() {
 }
 function btns() { const has = !!mask; $('cutToPC').disabled = !has; $('cutSave').disabled = !has; $('cutUndo').disabled = !points.length; $('cutReset').disabled = !points.length; }
 const toBlob = () => new Promise(r => cutCanvas().toBlob(r, 'image/png'));
+// ── 클릭 = 점, 끌기 = 네모로 잘라내기 ──
+const imgXY = e => { const r = cv.getBoundingClientRect(); return { x: (e.clientX - r.left) / r.width * cv.width, y: (e.clientY - r.top) / r.height * cv.height }; };
+let drag = null;
+cv.addEventListener('mousedown', e => { if (e.button !== 0 || !img) return; drag = { sx: e.clientX, sy: e.clientY, p0: imgXY(e), moved: false }; });
+window.addEventListener('mousemove', e => {
+  if (!drag) return;
+  if (Math.abs(e.clientX - drag.sx) + Math.abs(e.clientY - drag.sy) > 8) drag.moved = true;
+  if (!drag.moved) return;
+  const p = imgXY(e), R = $('cutRect');
+  const x0 = Math.max(0, Math.min(drag.p0.x, p.x)), y0 = Math.max(0, Math.min(drag.p0.y, p.y)), x1 = Math.min(cv.width, Math.max(drag.p0.x, p.x)), y1 = Math.min(cv.height, Math.max(drag.p0.y, p.y));
+  R.hidden = false; R.style.left = x0 * zoom + 'px'; R.style.top = y0 * zoom + 'px'; R.style.width = (x1 - x0) * zoom + 'px'; R.style.height = (y1 - y0) * zoom + 'px';
+  drag.rect = [x0, y0, x1, y1];
+  const sr = stage.getBoundingClientRect(); if (e.clientY > sr.bottom - 30) stage.scrollTop += 20; else if (e.clientY < sr.top + 30) stage.scrollTop -= 20;
+});
+window.addEventListener('mouseup', async e => {
+  if (!drag) return; const d = drag; drag = null; $('cutRect').hidden = true;
+  if (!d.moved) { addPoint(e, e.altKey ? 0 : 1); return; }
+  if (!d.rect || d.rect[2] - d.rect[0] < 20 || d.rect[3] - d.rect[1] < 20) return;
+  await cropTo(d.rect);
+});
+async function cropTo([x0, y0, x1, y1]) {
+  const c = document.createElement('canvas'); c.width = Math.round(x1 - x0); c.height = Math.round(y1 - y0);
+  c.getContext('2d').drawImage(img, -Math.round(x0), -Math.round(y0));
+  const blob = await new Promise(r => c.toBlob(r, 'image/png'));
+  if (!orig) { const ob = await fetch(imgURL).then(r => r.blob()); orig = { blob: ob, name: srcName }; }
+  $('cutBack').hidden = false;
+  await openBlob(blob, srcName + '_부분', true);
+}
 function addPoint(e, label) {
   if (!emb) { status(img ? '아직 분석 중입니다. 잠시만요…' : '사진부터 올려 주세요'); return; }
-  const r = cv.getBoundingClientRect(); points.push({ x: (e.clientX - r.left) / r.width * cv.width, y: (e.clientY - r.top) / r.height * cv.height, l: label });
+  const p = imgXY(e); if (p.x < 0 || p.y < 0 || p.x > cv.width || p.y > cv.height) return;
+  points.push({ x: p.x, y: p.y, l: label });
   draw(); decode().catch(err => status('오류: ' + err.message));
 }
-cv.addEventListener('click', e => addPoint(e, e.altKey ? 0 : 1));
 cv.addEventListener('contextmenu', e => { e.preventDefault(); addPoint(e, 0); });
+// ── 확대/축소 ──
+$('cutZoomBar').addEventListener('click', e => { const b = e.target.closest('[data-z]'); if (!b || !img) return; const z = b.dataset.z; if (z === 'fit') fit(); else setZoom(zoom * (z === '+' ? 1.25 : 0.8)); draw(); });
+stage.addEventListener('wheel', e => { if (!img || !(e.ctrlKey || e.metaKey)) return; e.preventDefault(); setZoom(zoom * (e.deltaY < 0 ? 1.15 : 0.87)); draw(); }, { passive: false });
+window.addEventListener('resize', () => { if (img && !$('cutWrap').hidden && Math.abs(zoom - fitZoom) < 0.001) fit(); });
+// ── 모드 전환 ──
+$('cutMode').addEventListener('click', async e => {
+  const b = e.target.closest('[data-m]'); if (!b || b.dataset.m === mode) return;
+  mode = b.dataset.m; try { localStorage.setItem('cut-mode', mode); } catch (_) {} paintMode();
+  if (img) { emb = null; await analyze(); }
+});
+$('cutBack').onclick = () => { if (orig) { const o = orig; orig = null; openBlob(o.blob, o.name); } };
 $('cutUndo').onclick = () => { points.pop(); decode(); };
 $('cutReset').onclick = () => { points = []; decode(); };
 $('cutTrim').onchange = drawPrev;
 $('cutClose').onclick = () => { $('cutWrap').hidden = true; };
 $('cutFile').onchange = e => { const f = e.target.files[0]; if (f) openBlob(f, f.name); e.target.value = ''; };
-const st = $('cutStage');
-st.addEventListener('dragover', e => { e.preventDefault(); st.classList.add('drag'); });
-st.addEventListener('dragleave', () => st.classList.remove('drag'));
-st.addEventListener('drop', e => { e.preventDefault(); st.classList.remove('drag'); const f = [...e.dataTransfer.files].find(x => /^image\//.test(x.type)); if (f) openBlob(f, f.name); });
+stage.addEventListener('dragover', e => { e.preventDefault(); stage.classList.add('drag'); });
+stage.addEventListener('dragleave', () => stage.classList.remove('drag'));
+stage.addEventListener('drop', e => { e.preventDefault(); stage.classList.remove('drag'); const f = [...e.dataTransfer.files].find(x => /^image\//.test(x.type)); if (f) openBlob(f, f.name); });
 $('cutSave').onclick = async () => { const b = await toBlob(); const a = document.createElement('a'); a.href = URL.createObjectURL(b); a.download = srcName + '_누끼.png'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 5000); };
 $('cutToPC').onclick = async () => { const b = await toBlob(); $('cutWrap').hidden = true; if (window.__twOpenBlob) window.__twOpenBlob(b, srcName + '_누끼.png'); };
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('cutWrap').hidden) $('cutWrap').hidden = true; });
-// 외부에서 열기: window.__cutOpen(blob 또는 url, 이름)
 window.__cutOpen = async (src, name) => {
   $('cutWrap').hidden = false;
   try { const b = src instanceof Blob ? src : await (window.__twGetBlob ? window.__twGetBlob(src) : fetch(src).then(r => r.blob())); await openBlob(b, name); }
