@@ -7198,10 +7198,12 @@ function autoMask() {  // 고른 덩어리 + 그 경계의 부드러운 테두�
   const W = cv.width, H = cv.height, N = W * H, out = new Uint8Array(N);
   if (!allMode && !sel.size) return null;
   const S = new Uint8Array(N); for (let i = 0; i < N; i++) if (lab[i] && (allMode ? comps[lab[i] - 1].big || sel.has(lab[i]) : sel.has(lab[i]))) S[i] = 1;
-  // 고른 덩어리 안쪽 구멍 속 작은 덩어리(글자 등)도 포함
-  const pickBoxes = comps.filter(c => allMode ? c.big : sel.has(c.id)).map(c => c.box), inner = new Set();
-  comps.forEach(c => { if (!sel.has(c.id) && !c.big && pickBoxes.some(b => c.box[0] >= b[0] && c.box[1] >= b[1] && c.box[2] <= b[2] && c.box[3] <= b[3])) inner.add(c.id); });
-  if (inner.size) for (let i = 0; i < N; i++) if (inner.has(lab[i])) S[i] = 1;
+  // 고른 물건에 완전히 둘러싸인 구멍 속 작은 덩어리만 포함 (떨어져 있는 색 동그라미·글자는 제외)
+  { const out2 = new Uint8Array(N), q = new Int32Array(N); let h = 0, t = 0;
+    const push = p => { if (!S[p] && !out2[p]) { out2[p] = 1; q[t++] = p; } };
+    for (let x = 0; x < W; x++) { push(x); push((H - 1) * W + x); } for (let y = 0; y < H; y++) { push(y * W); push(y * W + W - 1); }
+    while (h < t) { const p = q[h++], x = p % W; if (x > 0) push(p - 1); if (x < W - 1) push(p + 1); if (p >= W) push(p - W); if (p < N - W) push(p + W); }
+    for (let i = 0; i < N; i++) if (!S[i] && !out2[i] && lab[i]) S[i] = 1; }
   const D = 2; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const p = y * W + x; if (!A[p]) continue; if (S[p]) { out[p] = A[p]; continue; }
     let near = false; for (let dy = -D; dy <= D && !near; dy++) { const yy = y + dy; if (yy < 0 || yy >= H) continue; for (let dx = -D; dx <= D; dx++) { const xx = x + dx; if (xx >= 0 && xx < W && S[yy * W + xx]) { near = true; break; } } }
     if (near) out[p] = A[p]; }
