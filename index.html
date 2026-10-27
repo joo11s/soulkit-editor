@@ -6991,15 +6991,17 @@ function qdDownloadResult(format){
   window.SoulKitThumbs={load,submit,openInPC};
 })();
 </script>
-<!-- ✂ 눌러서 누끼 (SAM · transformers.js, Apache-2.0 — 브라우저 안에서 실행, 서버 사용 없음) -->
+<!-- ✂ 눌러서 누끼 — 브라우저 안에서 실행, 서버 사용 없음.
+     자동: BiRefNet_lite (ZhengPeng7/BiRefNet, MIT License, Copyright (c) Peng Zheng) — onnx-community/BiRefNet_lite-ONNX
+     정밀·빠른: SAM (Xenova/sam-vit-base, slimsam-77-uniform, Apache-2.0) · transformers.js (Apache-2.0) -->
 <div class="cut-wrap" id="cutWrap" hidden>
   <div class="cut-box" role="dialog" aria-modal="true" aria-label="눌러서 누끼">
     <div class="cut-head">
       <b>✂ 눌러서 누끼</b>
       <span class="cut-status" id="cutStatus">사진을 올리면 시작합니다</span>
       <span style="flex:1"></span>
-      <div class="cut-mode" id="cutMode" title="정밀: 테두리가 더 정확(처음 받는 용량이 큼) · 빠른: 가볍고 빠름">
-        <button data-m="precise">정밀</button><button data-m="fast">빠른</button>
+      <div class="cut-mode" id="cutMode" title="자동: 폰처럼 물건을 먼저 깔끔하게 따 두고 누른 것만 고름 · 정밀/빠른: 누른 점으로 범위를 추측(부분만 딸 때)">
+        <button data-m="auto">자동</button><button data-m="precise">정밀</button><button data-m="fast">빠른</button>
       </div>
       <button class="tw-ghost" id="cutBack" hidden title="잘라내기 전 전체 사진으로">← 전체 사진</button>
       <label class="tw-ghost cut-filebtn">사진 열기<input type="file" accept="image/*" id="cutFile" hidden></label>
@@ -7020,14 +7022,15 @@ function qdDownloadResult(format){
       </div>
       <div class="cut-side">
         <div class="cut-help">
-          <p><b>클릭</b> — 딸 물건을 누르세요 (초록 점)</p>
-          <p><b>오른쪽 클릭</b> 또는 <b>Alt+클릭</b> — 빼고 싶은 부분 (빨간 점)</p>
+          <p id="cutHelpAuto"><b>자동</b> — 물건을 한 번 누르면 그 물건만 땁니다. 여러 개를 누르면 같이 따고, <b>오른쪽 클릭</b>은 빼기.</p>
+          <p id="cutHelpSam"><b>정밀/빠른</b> — 물건의 일부만 딸 때. 클릭은 초록 점, <b>오른쪽 클릭</b>/<b>Alt+클릭</b>은 빼는 점.</p>
           <p><b>끌어서 네모</b> — 긴 상세페이지는 제품이 있는 부분을 네모로 그려 잘라낸 뒤 누르세요. 훨씬 정확해집니다.</p>
           <p><b>Ctrl+휠</b> 또는 위쪽 +/−로 확대·축소, 휠로 위아래 이동</p>
           <p class="cut-tip">투명 케이스는 흰 바탕에서 찍은 사진이 가장 깔끔합니다.</p>
         </div>
         <div class="cut-prev-wrap"><div class="cut-prev-label">결과 미리보기</div><canvas id="cutPrev"></canvas></div>
-        <div class="cut-range"><span>잡는 범위</span><div id="cutRange"><button data-mi="0">작게</button><button data-mi="1">중간</button><button data-mi="2">크게</button></div></div>
+        <div class="cut-range" id="cutAllWrap" hidden><span>자동</span><div id="cutAll"><button data-a="pick" class="on">누른 물건만</button><button data-a="all">찾은 것 전부</button></div></div>
+        <div class="cut-range" id="cutRangeWrap"><span>잡는 범위</span><div id="cutRange"><button data-mi="0">작게</button><button data-mi="1">중간</button><button data-mi="2">크게</button></div></div>
         <label class="cut-opt"><input type="checkbox" id="cutTrim" checked> 여백 잘라내기</label>
         <button class="tw-btn" id="cutToPC" disabled>포토크래프트로 보내기</button>
         <button class="tw-ghost cut-wide" id="cutSave" disabled>PNG 저장</button>
@@ -7068,31 +7071,38 @@ function qdDownloadResult(format){
 .cut-opt{font-size:12px;color:#aaa;display:flex;gap:6px;align-items:center}
 .cut-wide{width:100%}
 .cut-range{display:flex;align-items:center;gap:8px;font-size:12px;color:#aaa}
-#cutRange{display:flex;gap:4px}#cutRange button{background:#222;border:1px solid #3a3a3a;color:#bbb;border-radius:6px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer}
-#cutRange button.on{border-color:#f0d9a8;color:#f0d9a8}#cutRange button small{color:#777;margin-left:3px}
+#cutRange,#cutAll{display:flex;gap:4px}#cutRange button,#cutAll button{background:#222;border:1px solid #3a3a3a;color:#bbb;border-radius:6px;padding:4px 10px;font:inherit;font-size:12px;cursor:pointer}
+#cutRange button.on,#cutAll button.on{border-color:#f0d9a8;color:#f0d9a8}.cut-range[hidden]{display:none}#cutRange button small{color:#777;margin-left:3px}
 </style>
 <script type="module">
 const TJS = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2';
-const MODELS = { precise: 'Xenova/sam-vit-base', fast: 'Xenova/slimsam-77-uniform' };
+const MODELS = { precise: 'Xenova/sam-vit-base', fast: 'Xenova/slimsam-77-uniform', auto: 'onnx-community/BiRefNet_lite-ONNX' };
 const $ = id => document.getElementById(id);
-let mode = 'precise'; try { mode = localStorage.getItem('cut-mode') || 'precise'; } catch (_) {}
+let mode = 'auto'; try { mode = localStorage.getItem('cut-mode2') || 'auto'; } catch (_) {}
 let T = null, model = null, processor = null, loadedMode = null, loading = null;
 let img = null, imgURL = null, imgInputs = null, emb = null, points = [], mask = null, srcName = 'cutout', all3 = null, mi = -1;
+let A = null, lab = null, comps = null, sel = new Set(), allMode = false;  // 자동: 알파(0~255), 덩어리 번호, 덩어리 정보, 고른 덩어리
 let orig = null;   // 잘라내기 전 전체 사진 {blob, name}
 let zoom = 1, fitZoom = 1;
 const cv = $('cutCanvas'), ctx = cv.getContext('2d'), pv = $('cutPrev'), box = $('cutBoxC'), stage = $('cutStage');
 const status = t => $('cutStatus').textContent = t;
-function paintMode() { [...$('cutMode').children].forEach(b => b.classList.toggle('on', b.dataset.m === mode)); }
+function paintMode() { [...$('cutMode').children].forEach(b => b.classList.toggle('on', b.dataset.m === mode));
+  const au = mode === 'auto'; $('cutAllWrap').hidden = !au; $('cutRangeWrap').hidden = au; $('cutHelpAuto').style.opacity = au ? 1 : .45; $('cutHelpSam').style.opacity = au ? .45 : 1; }
 paintMode();
 async function ensureModel() {
   if (model && loadedMode === mode) return;
   if (loading && loading.mode === mode) return loading.p;
   const want = mode;
   const p = (async () => {
-    status((want === 'precise' ? '정밀' : '빠른') + ' 모델 준비 중… (처음 한 번만 받습니다' + (want === 'precise' ? ', 100MB 안팎' : '') + ')');
+    status({ auto: '자동', precise: '정밀', fast: '빠른' }[want] + ' 모델 준비 중… (처음 한 번만 받습니다' + (want === 'fast' ? '' : ', 100MB 안팎') + ')');
     T = T || await import(TJS);
     let dev = 'wasm'; try { if (navigator.gpu && await navigator.gpu.requestAdapter()) dev = 'webgpu'; } catch (_) {}
     let m;
+    if (want === 'auto') {
+      try { m = await T.AutoModel.from_pretrained(MODELS.auto, { device: dev, dtype: 'fp16' }); }
+      catch (e) { m = await T.AutoModel.from_pretrained(MODELS.auto, { device: 'wasm', dtype: 'fp32' }); }
+      processor = await T.AutoProcessor.from_pretrained(MODELS.auto); model = m; loadedMode = want; return;
+    }
     try { m = await T.SamModel.from_pretrained(MODELS[want], { device: dev, dtype: dev === 'webgpu' ? 'fp16' : 'q8' }); }
     catch (e) { m = await T.SamModel.from_pretrained(MODELS[want], { device: 'wasm', dtype: 'q8' }); }
     const pr = await T.AutoProcessor.from_pretrained(MODELS[want]);
@@ -7116,7 +7126,7 @@ function setZoom(z) {
 async function openBlob(blob, name, keepOrig) {
   $('cutWrap').hidden = false; srcName = String(name || 'cutout').replace(/\.[a-z0-9]+$/i, '');
   if (!keepOrig) { orig = null; $('cutBack').hidden = true; }
-  points = []; mask = null; all3 = null; mi = -1; emb = null; drawPrev(); btns();
+  points = []; mask = null; all3 = null; mi = -1; emb = null; A = null; lab = null; comps = null; sel = new Set(); drawPrev(); btns();
   if (imgURL) URL.revokeObjectURL(imgURL);
   imgURL = URL.createObjectURL(blob);
   img = await new Promise((ok, no) => { const im = new Image(); im.onload = () => ok(im); im.onerror = () => no(new Error('이미지를 읽지 못했습니다')); im.src = imgURL; });
@@ -7130,6 +7140,7 @@ async function analyze() {
     await ensureModel();
     status('사진 분석 중…');
     const raw = await T.RawImage.fromURL(imgURL);
+    if (mode === 'auto') { await autoMatte(raw); return; }
     imgInputs = await processor(raw);
     emb = await model.get_image_embeddings(imgInputs);
     const tall = img.naturalHeight / img.naturalWidth > 2.2 && !orig;
@@ -7137,18 +7148,73 @@ async function analyze() {
     if (points.length) await decode();
   } catch (e) { status('준비 실패: ' + e.message); console.error(e); }
 }
+// ── 자동: BiRefNet으로 물건 전체를 한 번에 따 두고(알파), 누른 덩어리만 고름 ──
+const h2f = h => { const s = h & 0x8000 ? -1 : 1, e = (h >> 10) & 31, f = h & 1023; return e === 0 ? s * 6.103515625e-5 * (f / 1024) : e === 31 ? (f ? NaN : s * Infinity) : s * Math.pow(2, e - 15) * (1 + f / 1024); };
+async function autoMatte(raw) {
+  const { pixel_values } = await processor(raw);
+  const out = await model({ input_image: pixel_values });
+  const t = out.output_image || Object.values(out)[0];
+  const [h, w] = t.dims.slice(-2), src = t.data, n = w * h, g = new ImageData(w, h);
+  const f16 = src instanceof Uint16Array;
+  for (let i = 0; i < n; i++) { const v = f16 ? h2f(src[i]) : src[i], a = Math.round(255 / (1 + Math.exp(-v))); g.data[i * 4] = g.data[i * 4 + 1] = g.data[i * 4 + 2] = a; g.data[i * 4 + 3] = 255; }
+  const sc = document.createElement('canvas'); sc.width = w; sc.height = h; sc.getContext('2d').putImageData(g, 0, 0);
+  const big = document.createElement('canvas'); big.width = cv.width; big.height = cv.height; const bx = big.getContext('2d'); bx.imageSmoothingQuality = 'high'; bx.drawImage(sc, 0, 0, big.width, big.height);
+  const bd = bx.getImageData(0, 0, big.width, big.height).data; A = new Uint8Array(cv.width * cv.height); for (let i = 0; i < A.length; i++) A[i] = bd[i * 4];
+  labelComps(); emb = true;
+  status(comps.length ? `물건 ${comps.filter(c => c.big).length}개를 찾았습니다 — 딸 물건을 누르세요` : '물건을 찾지 못했습니다 — 정밀 모드로 눌러 보세요');
+  if (points.length) await decode();
+}
+function labelComps() {  // 알파 128 이상을 한 덩어리씩 번호 매기기
+  const W = cv.width, H = cv.height, N = W * H; lab = new Int32Array(N); comps = []; const st = new Int32Array(N);
+  for (let s0 = 0; s0 < N; s0++) {
+    if (A[s0] < 128 || lab[s0]) continue;
+    const id = comps.length + 1; let top = 0, cnt = 0, x0 = W, y0 = H, x1 = 0, y1 = 0; st[top++] = s0; lab[s0] = id;
+    while (top) { const p = st[--top], x = p % W, y = (p - x) / W; cnt++; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y;
+      if (x > 0 && !lab[p - 1] && A[p - 1] >= 128) { lab[p - 1] = id; st[top++] = p - 1; } if (x < W - 1 && !lab[p + 1] && A[p + 1] >= 128) { lab[p + 1] = id; st[top++] = p + 1; }
+      if (y > 0 && !lab[p - W] && A[p - W] >= 128) { lab[p - W] = id; st[top++] = p - W; } if (y < H - 1 && !lab[p + W] && A[p + W] >= 128) { lab[p + W] = id; st[top++] = p + W; } }
+    comps.push({ id, n: cnt, box: [x0, y0, x1, y1] });
+  }
+  const maxN = Math.max(1, ...comps.map(c => c.n)); comps.forEach(c => c.big = c.n > maxN * 0.02);
+}
+function compAt(x, y) {  // 누른 곳의 덩어리 (배경을 눌렀으면 가까운 덩어리)
+  const W = cv.width, H = cv.height; x = Math.round(x); y = Math.round(y);
+  const R = Math.round(Math.max(W, H) * 0.04);
+  for (let r = 0; r <= R; r += Math.max(1, Math.round(r / 6) || 1)) for (let dy = -r; dy <= r; dy += Math.max(1, r)) for (let dx = -r; dx <= r; dx++) {
+    const xx = x + dx, yy = y + (Math.abs(dx) === r ? dy : (dy < 0 ? -r : r)); if (xx < 0 || yy < 0 || xx >= W || yy >= H) continue; const l = lab[yy * W + xx]; if (l) return l; }
+  return 0;
+}
+function autoMask() {  // 고른 덩어리 + 그 경계의 부드러운 테두리(2px)까지 알파로
+  const W = cv.width, H = cv.height, N = W * H, out = new Uint8Array(N);
+  if (!allMode && !sel.size) return null;
+  const S = new Uint8Array(N); for (let i = 0; i < N; i++) if (lab[i] && (allMode ? comps[lab[i] - 1].big || sel.has(lab[i]) : sel.has(lab[i]))) S[i] = 1;
+  // 고른 덩어리 안쪽 구멍 속 작은 덩어리(글자 등)도 포함
+  const pickBoxes = comps.filter(c => allMode ? c.big : sel.has(c.id)).map(c => c.box), inner = new Set();
+  comps.forEach(c => { if (!sel.has(c.id) && !c.big && pickBoxes.some(b => c.box[0] >= b[0] && c.box[1] >= b[1] && c.box[2] <= b[2] && c.box[3] <= b[3])) inner.add(c.id); });
+  if (inner.size) for (let i = 0; i < N; i++) if (inner.has(lab[i])) S[i] = 1;
+  const D = 2; for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) { const p = y * W + x; if (!A[p]) continue; if (S[p]) { out[p] = A[p]; continue; }
+    let near = false; for (let dy = -D; dy <= D && !near; dy++) { const yy = y + dy; if (yy < 0 || yy >= H) continue; for (let dx = -D; dx <= D; dx++) { const xx = x + dx; if (xx >= 0 && xx < W && S[yy * W + xx]) { near = true; break; } } }
+    if (near) out[p] = A[p]; }
+  return out;
+}
+function autoDecode() {
+  sel = new Set(); points.forEach(p => { const l = compAt(p.x, p.y); if (!l) return; if (p.l) sel.add(l); else sel.delete(l); });
+  const a = autoMask(); mask = a; draw(); drawPrev(); btns();
+  status(a ? (allMode ? '찾은 물건 전부를 땄습니다' : `물건 ${sel.size}개 선택 — 더 누르면 같이 따고, 오른쪽 클릭은 빼기`) : (points.length ? '누른 곳에서 물건을 찾지 못했습니다 — 물건 위를 눌러 주세요' : '딸 물건을 누르세요'));
+}
+$('cutAll').addEventListener('click', e => { const b = e.target.closest('[data-a]'); if (!b) return; allMode = b.dataset.a === 'all'; [...$('cutAll').children].forEach(x => x.classList.toggle('on', x === b)); if (A) autoDecode(); });
 function draw() {
   if (!img) return;
   ctx.clearRect(0, 0, cv.width, cv.height); ctx.drawImage(img, 0, 0);
   if (mask) {
     const o = ctx.getImageData(0, 0, cv.width, cv.height), d = o.data;
-    for (let i = 0, p = 0; p < mask.length; p++, i += 4) if (!mask[p]) { d[i] *= .35; d[i + 1] *= .35; d[i + 2] *= .35; }
+    for (let i = 0, p = 0; p < mask.length; p++, i += 4) if (mask[p] < (mode === 'auto' ? 128 : 1)) { d[i] *= .35; d[i + 1] *= .35; d[i + 2] *= .35; }
     ctx.putImageData(o, 0, 0);
   }
   const r = Math.max(5, Math.round(7 / zoom));
   points.forEach(p => { ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, 7); ctx.fillStyle = p.l ? '#22c55e' : '#ef4444'; ctx.fill(); ctx.lineWidth = Math.max(2, r / 3); ctx.strokeStyle = '#fff'; ctx.stroke(); });
 }
 async function decode() {
+  if (mode === 'auto' && A) { autoDecode(); return; }
   if (!emb || !points.length) { mask = null; all3 = null; mi = -1; draw(); drawPrev(); btns(); return; }
   status('누끼 계산 중…');
   const rs = imgInputs.reshaped_input_sizes[0];
@@ -7173,7 +7239,7 @@ function cutCanvas() {
   const c = document.createElement('canvas'); c.width = cv.width; c.height = cv.height; const x = c.getContext('2d');
   x.drawImage(img, 0, 0); const o = x.getImageData(0, 0, c.width, c.height), d = o.data;
   let minX = c.width, minY = c.height, maxX = -1, maxY = -1;
-  for (let y = 0; y < c.height; y++) for (let xx = 0; xx < c.width; xx++) { const p = y * c.width + xx; if (!mask[p]) d[p * 4 + 3] = 0; else { if (xx < minX) minX = xx; if (xx > maxX) maxX = xx; if (y < minY) minY = y; if (y > maxY) maxY = y; } }
+  for (let y = 0; y < c.height; y++) for (let xx = 0; xx < c.width; xx++) { const p = y * c.width + xx; const al = mode === 'auto' ? mask[p] : (mask[p] ? 255 : 0); if (al < 255) d[p * 4 + 3] = Math.round(d[p * 4 + 3] * al / 255); if (al < 24) {} else { if (xx < minX) minX = xx; if (xx > maxX) maxX = xx; if (y < minY) minY = y; if (y > maxY) maxY = y; } }
   x.putImageData(o, 0, 0);
   if (!$('cutTrim').checked || maxX < 0) return c;
   const pad = Math.round(Math.max(maxX - minX, maxY - minY) * 0.02);
@@ -7229,8 +7295,8 @@ window.addEventListener('resize', () => { if (img && !$('cutWrap').hidden && Mat
 // ── 모드 전환 ──
 $('cutMode').addEventListener('click', async e => {
   const b = e.target.closest('[data-m]'); if (!b || b.dataset.m === mode) return;
-  mode = b.dataset.m; try { localStorage.setItem('cut-mode', mode); } catch (_) {} paintMode();
-  if (img) { emb = null; await analyze(); }
+  mode = b.dataset.m; try { localStorage.setItem('cut-mode2', mode); } catch (_) {} paintMode();
+  if (img) { emb = null; mask = null; all3 = null; mi = -1; A = null; lab = null; draw(); drawPrev(); btns(); await analyze(); }
 });
 $('cutBack').onclick = () => { if (orig) { const o = orig; orig = null; openBlob(o.blob, o.name); } };
 $('cutUndo').onclick = () => { points.pop(); decode(); };
