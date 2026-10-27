@@ -7081,6 +7081,7 @@ const $ = id => document.getElementById(id);
 let mode = 'auto'; try { mode = localStorage.getItem('cut-mode2') || 'auto'; } catch (_) {}
 let T = null, model = null, processor = null, loadedMode = null, loading = null;
 let img = null, imgURL = null, imgInputs = null, emb = null, points = [], mask = null, srcName = 'cutout', all3 = null, mi = -1;
+let autoCPU = false; try { autoCPU = localStorage.getItem('cut-auto-cpu') === '1'; } catch (_) {}
 let A = null, lab = null, comps = null, sel = new Set(), allMode = false;  // 자동: 알파(0~255), 덩어리 번호, 덩어리 정보, 고른 덩어리
 let orig = null;   // 잘라내기 전 전체 사진 {blob, name}
 let zoom = 1, fitZoom = 1;
@@ -7099,7 +7100,8 @@ async function ensureModel() {
     let dev = 'wasm'; try { if (navigator.gpu && await navigator.gpu.requestAdapter()) dev = 'webgpu'; } catch (_) {}
     let m;
     if (want === 'auto') {
-      try { m = await T.AutoModel.from_pretrained(MODELS.auto, { device: dev, dtype: 'fp16' }); }
+      if (autoCPU) dev = 'wasm';
+      try { m = dev === 'wasm' ? await T.AutoModel.from_pretrained(MODELS.auto, { device: 'wasm', dtype: 'fp32' }) : await T.AutoModel.from_pretrained(MODELS.auto, { device: dev, dtype: 'fp16' }); }
       catch (e) { m = await T.AutoModel.from_pretrained(MODELS.auto, { device: 'wasm', dtype: 'fp32' }); }
       processor = await T.AutoProcessor.from_pretrained(MODELS.auto); model = m; loadedMode = want; return;
     }
@@ -7140,13 +7142,21 @@ async function analyze() {
     await ensureModel();
     status('사진 분석 중…');
     const raw = await T.RawImage.fromURL(imgURL);
-    if (mode === 'auto') { await autoMatte(raw); return; }
+    if (mode === 'auto') {
+      try { await autoMatte(raw); }
+      catch (e) {  // 그래픽 가속(WebGPU)에서 안 돌면 CPU로 다시 (이 PC에서는 다음부터 바로 CPU)
+        if (autoCPU) throw e; console.warn('auto webgpu failed', e);
+        autoCPU = true; try { localStorage.setItem('cut-auto-cpu', '1'); } catch (_) {}
+        model = null; loadedMode = null; loading = null; await ensureModel(); status('사진 분석 중… (CPU, 조금 걸립니다)'); await autoMatte(raw);
+      }
+      return;
+    }
     imgInputs = await processor(raw);
     emb = await model.get_image_embeddings(imgInputs);
     const tall = img.naturalHeight / img.naturalWidth > 2.2 && !orig;
     status(tall ? '긴 사진입니다 — 제품 부분을 끌어서 네모로 그리면 더 정확합니다 (바로 눌러도 됩니다)' : '준비 완료 — 딸 물건을 누르세요');
     if (points.length) await decode();
-  } catch (e) { status('준비 실패: ' + e.message); console.error(e); }
+  } catch (e) { status('준비 실패: ' + (e && e.message || e)); console.error(e); }
 }
 // ── 자동: BiRefNet으로 물건 전체를 한 번에 따 두고(알파), 누른 덩어리만 고름 ──
 const h2f = h => { const s = h & 0x8000 ? -1 : 1, e = (h >> 10) & 31, f = h & 1023; return e === 0 ? s * 6.103515625e-5 * (f / 1024) : e === 31 ? (f ? NaN : s * Infinity) : s * Math.pow(2, e - 15) * (1 + f / 1024); };
