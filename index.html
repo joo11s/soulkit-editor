@@ -6992,7 +6992,7 @@ function qdDownloadResult(format){
 })();
 </script>
 <!-- ✂ 눌러서 누끼 — 브라우저 안에서 실행, 서버 사용 없음.
-     자동: BiRefNet_lite (ZhengPeng7/BiRefNet, MIT License, Copyright (c) Peng Zheng) — onnx-community/BiRefNet_lite-ONNX
+     자동: ormbg (schirrmacher/ormbg, Apache-2.0, ISNet 구조) — onnx-community/ormbg-ONNX, 별도 작업 스레드(Worker)에서 CPU로 실행
      정밀·빠른: SAM (Xenova/sam-vit-base, slimsam-77-uniform, Apache-2.0) · transformers.js (Apache-2.0) -->
 <div class="cut-wrap" id="cutWrap" hidden>
   <div class="cut-box" role="dialog" aria-modal="true" aria-label="눌러서 누끼">
@@ -7076,12 +7076,29 @@ function qdDownloadResult(format){
 </style>
 <script type="module">
 const TJS = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@3.5.2';
-const MODELS = { precise: 'Xenova/sam-vit-base', fast: 'Xenova/slimsam-77-uniform', auto: 'onnx-community/BiRefNet_lite-ONNX' };
+const MODELS = { precise: 'Xenova/sam-vit-base', fast: 'Xenova/slimsam-77-uniform', auto: 'onnx-community/ormbg-ONNX' };
 const $ = id => document.getElementById(id);
 let mode = 'auto'; try { mode = localStorage.getItem('cut-mode2') || 'auto'; } catch (_) {}
 let T = null, model = null, processor = null, loadedMode = null, loading = null;
 let img = null, imgURL = null, imgInputs = null, emb = null, points = [], mask = null, srcName = 'cutout', all3 = null, mi = -1;
-let autoCPU = false; try { autoCPU = localStorage.getItem('cut-auto-cpu') === '1'; } catch (_) {}
+// 자동 모드는 화면이 멈추지 않도록 별도 스레드에서 돌림 (이 모델은 그래픽 가속에서 안 돌아 CPU 전용)
+let worker = null, wjob = null;
+function autoWorker() {
+  if (worker) return worker;
+  const code = `import * as T from '${TJS}'; let m, p;
+self.onmessage = async e => { try {
+  if (!m) { self.postMessage({ st: 'load' }); m = await T.AutoModel.from_pretrained('${MODELS.auto}', { device: 'wasm', dtype: 'q8' }); p = await T.AutoProcessor.from_pretrained('${MODELS.auto}'); }
+  self.postMessage({ st: 'run' }); const raw = await T.RawImage.fromBlob(e.data.blob); const { pixel_values } = await p(raw);
+  const o = await m({ pixel_values }); const a = o.alphas || Object.values(o)[0]; const d = Float32Array.from(a.data);
+  self.postMessage({ ok: 1, data: d, w: a.dims[3], h: a.dims[2] }, [d.buffer]);
+} catch (err) { self.postMessage({ err: String(err && err.message || err) }); } };`;
+  worker = new Worker(URL.createObjectURL(new Blob([code], { type: 'text/javascript' })), { type: 'module' });
+  worker.onmessage = e => { const m = e.data; if (!wjob) return; if (m.st === 'load') status('자동 모델 준비 중… (처음 한 번만 받습니다, 약 45MB)'); else if (m.st === 'run') { wjob.t = performance.now(); wjob.tick = setInterval(() => status('사진 분석 중… ' + Math.round((performance.now() - wjob.t) / 1000) + '초 (보통 20초 안팎)'), 1000); }
+    else { clearInterval(wjob.tick); const j = wjob; wjob = null; m.err ? j.no(new Error(m.err)) : j.ok(m); } };
+  worker.onerror = e => { if (wjob) { clearInterval(wjob.tick); const j = wjob; wjob = null; j.no(new Error(e.message || '작업 스레드 오류')); } };
+  return worker;
+}
+const runAuto = blob => new Promise((ok, no) => { autoWorker(); wjob = { ok, no }; worker.postMessage({ blob }); });
 let A = null, lab = null, comps = null, sel = new Set(), allMode = false;  // 자동: 알파(0~255), 덩어리 번호, 덩어리 정보, 고른 덩어리
 let orig = null;   // 잘라내기 전 전체 사진 {blob, name}
 let zoom = 1, fitZoom = 1;
@@ -7095,16 +7112,11 @@ async function ensureModel() {
   if (loading && loading.mode === mode) return loading.p;
   const want = mode;
   const p = (async () => {
-    status({ auto: '자동', precise: '정밀', fast: '빠른' }[want] + ' 모델 준비 중… (처음 한 번만 받습니다' + (want === 'fast' ? '' : ', 100MB 안팎') + ')');
+    status({ auto: '자동', precise: '정밀', fast: '빠른' }[want] + ' 모델 준비 중… (처음 한 번만 받습니다' + (want === 'precise' ? ', 100MB 안팎' : '') + ')');
     T = T || await import(TJS);
     let dev = 'wasm'; try { if (navigator.gpu && await navigator.gpu.requestAdapter()) dev = 'webgpu'; } catch (_) {}
     let m;
-    if (want === 'auto') {
-      if (autoCPU) dev = 'wasm';
-      try { m = dev === 'wasm' ? await T.AutoModel.from_pretrained(MODELS.auto, { device: 'wasm', dtype: 'fp32' }) : await T.AutoModel.from_pretrained(MODELS.auto, { device: dev, dtype: 'fp16' }); }
-      catch (e) { m = await T.AutoModel.from_pretrained(MODELS.auto, { device: 'wasm', dtype: 'fp32' }); }
-      processor = await T.AutoProcessor.from_pretrained(MODELS.auto); model = m; loadedMode = want; return;
-    }
+    if (want === 'auto') { autoWorker(); model = 'worker'; loadedMode = want; return; }
     try { m = await T.SamModel.from_pretrained(MODELS[want], { device: dev, dtype: dev === 'webgpu' ? 'fp16' : 'q8' }); }
     catch (e) { m = await T.SamModel.from_pretrained(MODELS[want], { device: 'wasm', dtype: 'q8' }); }
     const pr = await T.AutoProcessor.from_pretrained(MODELS[want]);
@@ -7141,16 +7153,8 @@ async function analyze() {
   try {
     await ensureModel();
     status('사진 분석 중…');
+    if (mode === 'auto') { await autoMatte(); return; }
     const raw = await T.RawImage.fromURL(imgURL);
-    if (mode === 'auto') {
-      try { await autoMatte(raw); }
-      catch (e) {  // 그래픽 가속(WebGPU)에서 안 돌면 CPU로 다시 (이 PC에서는 다음부터 바로 CPU)
-        if (autoCPU) throw e; console.warn('auto webgpu failed', e);
-        autoCPU = true; try { localStorage.setItem('cut-auto-cpu', '1'); } catch (_) {}
-        model = null; loadedMode = null; loading = null; await ensureModel(); status('사진 분석 중… (CPU, 조금 걸립니다)'); await autoMatte(raw);
-      }
-      return;
-    }
     imgInputs = await processor(raw);
     emb = await model.get_image_embeddings(imgInputs);
     const tall = img.naturalHeight / img.naturalWidth > 2.2 && !orig;
@@ -7158,15 +7162,12 @@ async function analyze() {
     if (points.length) await decode();
   } catch (e) { status('준비 실패: ' + (e && e.message || e)); console.error(e); }
 }
-// ── 자동: BiRefNet으로 물건 전체를 한 번에 따 두고(알파), 누른 덩어리만 고름 ──
-const h2f = h => { const s = h & 0x8000 ? -1 : 1, e = (h >> 10) & 31, f = h & 1023; return e === 0 ? s * 6.103515625e-5 * (f / 1024) : e === 31 ? (f ? NaN : s * Infinity) : s * Math.pow(2, e - 15) * (1 + f / 1024); };
-async function autoMatte(raw) {
-  const { pixel_values } = await processor(raw);
-  const out = await model({ input_image: pixel_values });
-  const t = out.output_image || Object.values(out)[0];
-  const [h, w] = t.dims.slice(-2), src = t.data, n = w * h, g = new ImageData(w, h);
-  const f16 = src instanceof Uint16Array;
-  for (let i = 0; i < n; i++) { const v = f16 ? h2f(src[i]) : src[i], a = Math.round(255 / (1 + Math.exp(-v))); g.data[i * 4] = g.data[i * 4 + 1] = g.data[i * 4 + 2] = a; g.data[i * 4 + 3] = 255; }
+// ── 자동: ormbg로 물건 전체를 한 번에 따 두고(알파), 누른 덩어리만 고름 ──
+async function autoMatte() {
+  const myURL = imgURL, blob = await fetch(imgURL).then(r => r.blob());
+  const r = await runAuto(blob); if (myURL !== imgURL || mode !== 'auto') return;  // 그 사이 다른 사진을 열었으면 버림
+  const { w, h, data: src } = r, n = w * h, g = new ImageData(w, h);
+  for (let i = 0; i < n; i++) { const a = Math.round(Math.max(0, Math.min(1, src[i])) * 255); g.data[i * 4] = g.data[i * 4 + 1] = g.data[i * 4 + 2] = a; g.data[i * 4 + 3] = 255; }
   const sc = document.createElement('canvas'); sc.width = w; sc.height = h; sc.getContext('2d').putImageData(g, 0, 0);
   const big = document.createElement('canvas'); big.width = cv.width; big.height = cv.height; const bx = big.getContext('2d'); bx.imageSmoothingQuality = 'high'; bx.drawImage(sc, 0, 0, big.width, big.height);
   const bd = bx.getImageData(0, 0, big.width, big.height).data; A = new Uint8Array(cv.width * cv.height); for (let i = 0; i < A.length; i++) A[i] = bd[i * 4];
