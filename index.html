@@ -647,7 +647,7 @@ select.pi{cursor:pointer}
   </div>
 </div>
 
-<div style="text-align:center;font-size:10px;color:#666;padding:5px 0;background:#111;border-bottom:1px solid #1a1a1a;flex-shrink:0">AI가 만든 결과물이니, 꼭 한 번씩 확인해 주세요 😊</div>
+<div class="ai-note" style="text-align:center;font-size:10px;color:#666;padding:5px 0;background:#111;border-bottom:1px solid #1a1a1a;flex-shrink:0">AI가 만든 결과물이니, 꼭 한 번씩 확인해 주세요 😊</div>
 <div class="tab-bar" style="align-items:center">
   <button class="tab-btn active" id="tab-editor" onclick="switchTab('editor')">📋 상세페이지 에디터</button>
   <button class="tab-btn" id="tab-main" onclick="switchTab('main')">🖼️ 메인이미지 생성</button>
@@ -1224,7 +1224,7 @@ select.pi{cursor:pointer}
         <div class="tw-kinds" id="tw-kinds">
           <button type="button" class="tw-kind on" data-k="thumb">썸네일</button>
           <button type="button" class="tw-kind" data-k="main_set">메인이미지 세트</button>
-          <button type="button" class="tw-kind" data-k="detail">상세페이지</button>
+          <button type="button" class="tw-kind" data-k="detail_page">상세페이지</button>
           <button type="button" class="tw-kind" data-k="banner">배너</button>
         </div>
       </div>
@@ -1251,7 +1251,7 @@ select.pi{cursor:pointer}
       </div>
       <button class="tw-btn" id="tw-submit">Claude에게 요청하기</button>
       <div class="tw-msg" id="tw-msg"></div>
-      <div class="tw-howto">요청 후 노트북 CC에 <code>이미지 작업실 처리해줘</code> 라고 말하면 대기 중인 요청을 만들어 올립니다.</div>
+      <div class="tw-howto">요청하면 2분 안에 자동으로 만들기 시작합니다. 스타일은 매번 코드가 매거진 스타일 중에서 골라 주고, 구성은 AI가 자료를 보고 정합니다.</div>
     </div>
     <div class="tw-right">
       <div class="tw-pc">
@@ -6800,7 +6800,9 @@ function qdDownloadResult(format){
       chips:['1000x1000','밝은 배경','진한 배경','할인 뱃지','BEST 뱃지','중량/구성 강조','텍스트 최소화']},
     main_set:{name:'메인이미지 세트',unit:'장수',count:5,ph:'예) 1000x1000 5장. 1번 대표컷, 2번 구성품, 3번 사용 장면, 4번 디테일, 5번 사이즈/중량 안내',
       chips:['1000x1000','대표컷','구성품 컷','디테일 컷','사이즈 안내','통일된 톤']},
-    detail:{name:'상세페이지',unit:'섹션 수',count:4,ph:'예) 폭 860px. 1)상단 후킹 배너 2)제품 특징 3가지 3)공급사 이미지 감싸기 4)배송·보관 안내. 공급사 이미지는 훼손 없이 그대로',
+    detail_page:{name:'상세페이지',unit:'섹션 수',count:0,ph:'상품 사진과 설명 자료를 넣어 주세요. 매거진 스타일로 대표 이미지·표지·섹션(개수는 AI가 판단)·구성·배송 안내까지 만들고 860px로 이어 붙입니다.',
+      chips:['860px 자동','섹션 수 AI 판단','스타일 매번 자동 선택']},
+    detail:{name:'상세페이지 표지',unit:'섹션 수',count:4,ph:'예) 폭 860px. 1)상단 후킹 배너 2)제품 특징 3가지 3)공급사 이미지 감싸기 4)배송·보관 안내. 공급사 이미지는 훼손 없이 그대로',
       chips:['폭 860px','상단 후킹','특징 3가지','공급사 이미지 그대로','구성/스펙 표','배송·보관 안내']},
     banner:{name:'배너',unit:'장수',count:2,ph:'예) 1200x400 가을 할인 배너. 문구: 가을 특가 최대 30%. 제이원투몰 민트 톤',
       chips:['1200x400','860x300','모바일 배너','할인 문구','기간 표시','브랜드 톤']}
@@ -6831,7 +6833,7 @@ function qdDownloadResult(format){
   function setKind(k){
     if(!KINDS[k])return;kind=k;const K=KINDS[k];
     [...$('tw-kinds').children].forEach(b=>b.classList.toggle('on',b.dataset.k===k));
-    $('tw-count-label').textContent=K.unit;$('tw-count').value=String(K.count);$('tw-req').placeholder=K.ph;
+    $('tw-count-label').textContent=K.unit;$('tw-count').value=String(K.count||1);$('tw-count').parentElement.style.display=K.count?'':'none';$('tw-req').placeholder=K.ph;
     $('tw-chips').innerHTML=K.chips.map(c=>`<span class="tw-chip">${esc(c)}</span>`).join('');
   }
   async function submit(){
@@ -6855,7 +6857,7 @@ function qdDownloadResult(format){
       const r=await call('soulkit-thumb-request',{method:'POST',headers:{'Content-Type':'application/json'},
         body:JSON.stringify({kind,biz:$('tw-biz').value,count:Number($('tw-count').value),request:req,source_url:urls[0],source_urls:urls,source_name:files.map(f=>f.name||'').join(', ')})});
       if(!r.ok)throw new Error('등록 실패');
-      msg('요청 등록 완료 ('+r.id+') — 노트북 CC에 "이미지 작업실 처리해줘"라고 말해주세요','ok');
+      msg('요청 등록 완료 ('+r.id+') — 2분 안에 자동으로 시작합니다','ok');
       $('tw-req').value='';files=[];drawFiles();$('tw-file').value='';
       load();
     }catch(e){msg('실패: '+e.message,'err');}
@@ -7330,5 +7332,6 @@ window.__cutOpen = async (src, name) => {
 };
 </script>
 
+<script>/* CAOS 안에서 열리면 로고 줄·안내 줄을 숨기고, 작업실 탭에서는 윗줄 전체를 숨겨 작업 공간을 넓힘 */(function(){if(window.self===window.top)return;var st=document.createElement("style");st.textContent=".in-caos .topbar .logo,.in-caos .topbar .badge,.in-caos .ai-note{display:none!important}.in-caos.tw-on .topbar{display:none!important}";document.head.appendChild(st);var R=document.documentElement;R.classList.add("in-caos");var q=document.getElementById("tab-quick");var sync=function(){R.classList.toggle("tw-on",!!(q&&q.classList.contains("active")));};if(q)new MutationObserver(sync).observe(q,{attributes:true,attributeFilter:["class"]});sync();})();</script>
 </body>
 </html>
